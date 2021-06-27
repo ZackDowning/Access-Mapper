@@ -1,9 +1,7 @@
-from netmiko import ConnectHandler
-from netmiko import ssh_exception
-from netmiko import SSHDetect
-from address_validator import ipv4
 import os
 import sys
+from netmiko import ConnectHandler, ssh_exception, SSHDetect
+from address_validator import ipv4
 
 if getattr(sys, 'frozen', False):
     os.environ['NET_TEXTFSM'] = sys._MEIPASS
@@ -41,106 +39,97 @@ class MgmtIPAddresses:
                 return False
 
 
-# Returns dictionary with..
-# 'con_type': con_type,
-# 'connectivity': connectivity,
-# 'authentication': authentication,
-# 'authorization': authorization,
-# 'hostname': hostname,
-# 'session': session,
-# 'devicetype': devicetype,
-# 'exception': exception
-def connection(ip_address, username, password):
-    device = {
-        'device_type': 'autodetect',
-        'ip': ip_address,
-        'username': username,
-        'password': password
-    }
-    hostname = ''
-    con_type = ''
-    session = ''
-    devicetype = ''
-    exception = 'None'
-    authentication = False
-    authorization = False
-    connectivity = False
-    try:
+class Connection:
+    def __init__(self, ip_address, username, password):
+        self.ip_address = ip_address
+        self.username = username
+        self.password = password
+        self.hostname = ''
+        self.devicetype = ''
+        self.con_type = ''
+        self.exception = 'None'
+        self.authentication = False
+        self.authorization = False
+        self.connectivity = False
+
+    def session(self):
+        """
+        Returns SSH or TELNET Netmiko session and populates Connection attributes
+        """
+        session = None
+        device = {
+            'device_type': 'autodetect',
+            'ip': self.ip_address,
+            'username': self.username,
+            'password': self.password
+        }
         try:
-            devicetype = SSHDetect(**device).autodetect()
-            device['device_type'] = devicetype
-            session = ConnectHandler(**device)
-        except ValueError:
             try:
-                device['device_type'] = 'cisco_ios'
-                devicetype = 'cisco_ios'
+                self.devicetype = SSHDetect(**device).autodetect()
+                device['device_type'] = self.devicetype
                 session = ConnectHandler(**device)
             except ValueError:
-                device['device_type'] = 'cisco_ios'
-                devicetype = 'cisco_ios'
-                session = ConnectHandler(**device)
-        showver = session.send_command('show version', use_textfsm=True)
-        if not showver.__contains__('Failed'):
-            hostname = showver[0]['hostname']
-            authorization = True
-        authentication = True
-        connectivity = True
-        con_type = 'SSH'
-    except (ConnectionRefusedError, ValueError, ssh_exception.NetmikoAuthenticationException,
-            ssh_exception.NetmikoTimeoutException):
-        try:
-            device['device_type'] = 'cisco_ios_telnet'
-            devicetype = 'cisco_ios_telnet'
-            device['secret'] = password
-            session = ConnectHandler(**device)
+                try:
+                    device['device_type'] = 'cisco_ios'
+                    self.devicetype = 'cisco_ios'
+                    session = ConnectHandler(**device)
+                except ValueError:
+                    device['device_type'] = 'cisco_ios'
+                    self.devicetype = 'cisco_ios'
+                    session = ConnectHandler(**device)
             showver = session.send_command('show version', use_textfsm=True)
             if not showver.__contains__('Failed'):
-                hostname = showver[0]['hostname']
-                authorization = True
-            authentication = True
-            connectivity = True
-            con_type = 'TELNET'
-        except ssh_exception.NetmikoAuthenticationException:
+                self.hostname = showver[0]['hostname']
+                self.authorization = True
+            self.authentication = True
+            self.connectivity = True
+            self.con_type = 'SSH'
+        except (ConnectionRefusedError, ValueError, ssh_exception.NetmikoAuthenticationException,
+                ssh_exception.NetmikoTimeoutException):
             try:
                 device['device_type'] = 'cisco_ios_telnet'
-                devicetype = 'cisco_ios_telnet'
-                device['secret'] = password
+                self.devicetype = 'cisco_ios_telnet'
+                device['secret'] = self.password
                 session = ConnectHandler(**device)
                 showver = session.send_command('show version', use_textfsm=True)
                 if not showver.__contains__('Failed'):
-                    hostname = showver[0]['hostname']
-                    authorization = True
-                authentication = True
-                connectivity = True
-                con_type = 'TELNET'
+                    self.hostname = showver[0]['hostname']
+                    self.authorization = True
+                self.authentication = True
+                self.connectivity = True
+                self.con_type = 'TELNET'
             except ssh_exception.NetmikoAuthenticationException:
-                connectivity = True
-                exception = 'NetmikoAuthenticationException'
+                try:
+                    device['device_type'] = 'cisco_ios_telnet'
+                    self.devicetype = 'cisco_ios_telnet'
+                    device['secret'] = self.password
+                    session = ConnectHandler(**device)
+                    showver = session.send_command('show version', use_textfsm=True)
+                    if not showver.__contains__('Failed'):
+                        self.hostname = showver[0]['hostname']
+                        self.authorization = True
+                    self.authentication = True
+                    self.connectivity = True
+                    self.con_type = 'TELNET'
+                except ssh_exception.NetmikoAuthenticationException:
+                    self.connectivity = True
+                    self.exception = 'NetmikoAuthenticationException'
+                except ssh_exception.NetmikoTimeoutException:
+                    self.exception = 'NetmikoTimeoutException'
+                except ConnectionRefusedError:
+                    self.exception = 'ConnectionRefusedError'
+                except ValueError:
+                    self.exception = 'ValueError'
+                except TimeoutError:
+                    self.exception = 'TimeoutError'
             except ssh_exception.NetmikoTimeoutException:
-                exception = 'NetmikoTimeoutException'
+                self.exception = 'NetmikoTimeoutException'
             except ConnectionRefusedError:
-                exception = 'ConnectionRefusedError'
+                self.exception = 'ConnectionRefusedError'
             except ValueError:
-                exception = 'ValueError'
+                self.exception = 'ValueError'
             except TimeoutError:
-                exception = 'TimeoutError'
-        except ssh_exception.NetmikoTimeoutException:
-            exception = 'NetmikoTimeoutException'
-        except ConnectionRefusedError:
-            exception = 'ConnectionRefusedError'
-        except ValueError:
-            exception = 'ValueError'
-        except TimeoutError:
-            exception = 'TimeoutError'
-    except OSError:
-        exception = 'OSError'
-    return {
-        'con_type': con_type,
-        'connectivity': connectivity,
-        'authentication': authentication,
-        'authorization': authorization,
-        'hostname': hostname,
-        'session': session,
-        'devicetype': devicetype,
-        'exception': exception
-    }
+                self.exception = 'TimeoutError'
+        except OSError:
+            self.exception = 'OSError'
+        return session
