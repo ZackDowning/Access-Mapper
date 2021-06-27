@@ -3,76 +3,42 @@ from netmiko import ssh_exception
 from netmiko import SSHDetect
 from address_validator import ipv4
 import os
+import sys
 
-os.environ['NET_TEXTFSM'] = './Inputs/working-files/templates'
+if getattr(sys, 'frozen', False):
+    os.environ['NET_TEXTFSM'] = sys._MEIPASS
+else:
+    os.environ['NET_TEXTFSM'] = './working-files/templates'
 
 
 class MgmtIPAddresses:
+    """
+    Input .txt file location containing list of management IP addresses
+    """
     def __init__(self, mgmt_file_location):
         self.mgmt_file_location = mgmt_file_location
         self.mgmt_ips = []
-        self.valid = False
-        self.invalid_ips = {
-            'line_num': [],
-            'ip_address': []
-        }
+        self.invalid_line_nums = []
+        self.invalid_ip_addresses = []
 
     def validate(self):
+        """
+        Returns bool for file format validity and appends values to attributes
+        """
         invalid_lines = 0
-        line_num = 0
         with open(self.mgmt_file_location) as file:
-            for address in file:
-                line_num += 1
+            for idx, address in enumerate(file):
                 ip_address = str(address).strip('\n')
                 if ipv4(ip_address) is False:
-                    self.invalid_ips['line_num'].append(str(line_num))
-                    self.invalid_ips['ip_address'].append(str(address))
+                    self.invalid_line_nums.append(str(idx + 1))
+                    self.invalid_ip_addresses.append(str(address))
                     invalid_lines += 1
                 else:
                     self.mgmt_ips.append(ip_address)
             if invalid_lines == 0:
-                self.valid = True
-        return self.valid
-
-
-# # Checks and waits for validity of individual IP address in MGMT.txt file and returns list of IP addresses once valid
-# def mgmt_ip_addresses(mgmt_file):
-#     valid_file = False
-#     output = {
-#         'mgmt_ips': [],
-#         'valid_file': []
-#     }
-#     mgmt_ips = []
-#     while valid_file is False:
-#         try:
-#             invalid_lines = 0
-#             line_num = 0
-#             invalid_ips = {
-#                 'line_num': [],
-#                 'ip_address': []
-#             }
-#             with open(mgmt_file) as file:
-#                 for address in file:
-#                     line_num += 1
-#                     ip_address = str(address).strip('\n')
-#                     if ipv4(ip_address) is False:
-#                         invalid_ips['line_num'].append(str(line_num))
-#                         invalid_ips['ip_address'].append(str(address))
-#                         invalid_lines += 1
-#                     else:
-#                         mgmt_ips.append(ip_address)
-#             if invalid_lines == 0:
-#                 valid_file = True
-#                 print('"MGMT.txt" file validated.')
-#             else:
-#                 print('Invalid MGMT.txt file entries:')
-#                 for (line_n, ip_addr) in zip(invalid_ips['line_num'], invalid_ips['ip_address']):
-#                     print(f'   Line {line_n} - {ip_addr}')
-#                 input('\nPress Enter once "MGMT.txt" file is ready.')
-#         except FileNotFoundError:
-#             input('\n"MGMT.txt" file not found."\n'
-#                   'Press Enter once "MGMT.txt" file is ready.')
-#     return mgmt_ips
+                return True
+            else:
+                return False
 
 
 # Returns dictionary with..
