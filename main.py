@@ -25,12 +25,15 @@ if __name__ == '__main__':
                     current_window = Sg.Window('Access Mapper', layout2, margins=(100, 100))
                 else:
                     current_window.close()
-                    invalid_lines = ''
-                    line_nums = mgmt_file.invalid_ips['line_num']
-                    ip_addresses = mgmt_file.invalid_ips['ip_address']
+                    invalid_lines = 'Line    | Value\n'
+                    line_nums = mgmt_file.invalid_line_nums
+                    ip_addresses = mgmt_file.invalid_ip_addresses
                     for (line_n, ip_addr) in zip(
                             line_nums, ip_addresses):
-                        invalid_lines += f'   Line {line_n} - {ip_addr}'
+                        blank_space = ''
+                        for num1 in range(0, 10 - len(line_n)):
+                            blank_space += ' '
+                        invalid_lines += f'{line_n}{blank_space}  {ip_addr}'
                     layout3 = [
                         gui_print('Invalid File Entries'),
                         gui_print_box(invalid_lines, size=(30, 15)),
