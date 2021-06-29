@@ -1,5 +1,6 @@
 import os
 import sys
+import concurrent.futures
 from netmiko import ConnectHandler, ssh_exception, SSHDetect
 from address_validator import ipv4
 
@@ -10,9 +11,7 @@ else:
 
 
 class MgmtIPAddresses:
-    """
-    Input .txt file location containing list of management IP addresses
-    """
+    """Input .txt file location containing list of management IP addresses"""
     def __init__(self, mgmt_file_location):
         self.mgmt_file_location = mgmt_file_location
         self.mgmt_ips = []
@@ -20,9 +19,7 @@ class MgmtIPAddresses:
         self.invalid_ip_addresses = []
 
     def validate(self):
-        """
-        Returns bool for file format validity and appends values to attributes
-        """
+        """Returns bool for file format validity and appends values to attributes"""
         invalid_lines = 0
         with open(self.mgmt_file_location) as file:
             for idx, address in enumerate(file):
@@ -53,9 +50,7 @@ class Connection:
         self.connectivity = False
 
     def session(self):
-        """
-        Returns SSH or TELNET Netmiko session and populates Connection attributes
-        """
+        """Returns SSH or TELNET Netmiko session and populates Connection attributes"""
         session = None
         device = {
             'device_type': 'autodetect',
@@ -133,3 +128,28 @@ class Connection:
         except OSError:
             self.exception = 'OSError'
         return session
+
+
+class MultiThread:
+    def __init__(self, function, iterable, successful_devices, failed_devices, threads=50):
+        self.function = function
+        self.iterable = iterable
+        self.successful_devices = successful_devices
+        """List of successful devices for function to append to for Windows PyInstaller bug checking"""
+        self.failed_devices = failed_devices
+        """List of failed devices for function to append to for Windows PyInstaller bug checking"""
+        self.threads = threads
+
+    def mt(self):
+        """Runs function with iterable with multithreading using a default of 50 threads"""
+        # While loop is to account for bug with Windows PyInstaller exe file dropping threads
+        while True:
+            self.successful_devices = []
+            self.failed_devices = []
+            executor = concurrent.futures.ThreadPoolExecutor(self.threads)
+            futures = [executor.submit(self.function, val) for val in self.iterable]
+            concurrent.futures.wait(futures, timeout=None)
+            successful = len(self.successful_devices)
+            failed = len(self.failed_devices)
+            if (successful + failed) == len(self.iterable):
+                break
