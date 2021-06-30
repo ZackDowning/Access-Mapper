@@ -97,6 +97,7 @@ class Discovery:
             if conn.authorization:
                 self.successful_devices.append(ip)
             else:
+                # TODO: Output failed devices to list of dictionaries with more device details
                 self.failed_devices.append(ip)
 
         while True:
