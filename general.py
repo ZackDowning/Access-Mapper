@@ -133,7 +133,7 @@ class MultiThread:
     """Executes multithreading on provided function and iterable"""
     def mt(self):
         executor = concurrent.futures.ThreadPoolExecutor(self.threads)
-        futures = [executor.submit(self.function, val) for val in self.iterable]
+        futures = [executor.submit(self.function, (val, index)) for (val, index) in enumerate(self.iterable)]
         concurrent.futures.wait(futures, timeout=None)
 
     """Returns bool if Windows PyInstaller bug is present with provided lists for successful and failed devices"""

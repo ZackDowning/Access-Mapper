@@ -87,3 +87,101 @@ def w_invalid_file_entry(current_window, mgmt_file):
         button('Retry')
     ]
     return Sg.Window(window_title, layout, margins=(100, 100))
+
+
+def w_function_selection(current_window):
+    current_window.close()
+    layout = [
+        gui_print('Tool Selection'),
+        button('Endpoint Discovery'),
+        button('Endpoint Provisioning')
+    ]
+    return Sg.Window(window_title, layout, margins=(100, 100))
+
+
+def w_discovery_query(current_window):
+    """Discovery Query Window"""
+    current_window.close()
+    layout = [
+        gui_print('Enter IP Address or MAC Address of device to find details'),
+        gui_input(),
+        gui_print('Network Username'),
+        gui_input(),
+        gui_print('Network Password'),
+        gui_password_input(''),
+        button('Run Discovery')
+    ]
+    return Sg.Window(window_title, layout, margins=(100, 100))
+
+
+def w_invalid_discovery_query(current_window):
+    """Discovery Query Window"""
+    current_window.close()
+    layout = [
+        gui_print('Invalid Discovery Query Value. Either invalid MAC Address or invalid IP Address'),
+        gui_print('Enter IP Address or MAC Address of device to find details'),
+        gui_input(),
+        button('Run Discovery')
+    ]
+    return Sg.Window(window_title, layout, margins=(100, 100))
+
+
+def w_running_discovery(current_window):
+    current_window.close()
+    layout = [
+        gui_print('Running Discovery...')
+    ]
+    current_window = Sg.Window(window_title, layout, margins=(100, 100))
+    current_window.read()
+    return current_window
+
+
+def w_windows_bug(current_window):
+    current_window.close()
+    layout = [
+        gui_print('Taking longer than expected due to Windows bug...')
+    ]
+    current_window = Sg.Window(window_title, layout, margins=(100, 100))
+    current_window.read()
+    return current_window
+
+
+def w_finished_discovery(
+        current_window,
+        host_mac_address,
+        host_ip_address,
+        gateway_ip_address,
+        gateway_hostname,
+        gateway_mgmt_ip_address,
+        host_vlan,
+        connected_device_interface,
+        connected_device_hostname,
+        connected_device_mgmt_ip_address
+):
+    current_window.close()
+    layout = [
+        gui_print(f'Host VLAN: {host_vlan}'),
+        gui_print(f'Host MAC Address: {host_mac_address}'),
+        gui_print(f'Host IP Address: {host_ip_address}'),
+        gui_print(f'Host Gateway IP Address: {gateway_ip_address}'),
+        gui_print(f'Upstream Device IP Address: {connected_device_mgmt_ip_address}'),
+        gui_print(f'Upstream Device Hostname: {connected_device_hostname}'),
+        gui_print(f'Upstream Device Interface: {connected_device_interface}'),
+        gui_print(f'Gateway Hostname: {gateway_hostname}'),
+        gui_print(f'Gateway Management IP Address: {gateway_mgmt_ip_address}'),
+        button('Main Page'),
+        button('Function Selection')
+    ]
+    return Sg.Window(window_title, layout, margins=(100, 100))
+
+# def w_template(current_window, mgmt_file):
+#     """Template Window"""
+#     current_window.close()
+#     layout = [
+#         gui_print('Invalid File Entries'),
+#         gui_print_box(invalid_lines, size=(30, 15)),
+#         gui_print('Select file containing switch management IP addresses'),
+#         file_browse_botton('Browse'),
+#         button('Retry')
+#     ]
+#     return Sg.Window(window_title, layout, margins=(100, 100))
