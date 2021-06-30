@@ -1,6 +1,7 @@
 import re
 from ipaddress import IPv4Network, IPv4Interface
 from general import Connection, MultiThread
+from gui import w_running_discovery, w_windows_bug
 
 
 class Interface:
@@ -64,36 +65,65 @@ class IPAddress:
 
 
 class Discovery:
-    def __init__(self, discovery_type, mgmt_ip_list, query_value, username, password):
+    def __init__(self, current_window, input_type, mgmt_ip_list, query_value, username, password):
         self.host_vlan = None
         self.host_mac_address = None
         self.host_ip_address = None
-        self.connected_device_l3_interface = None
+        self.gateway_ip_address = None
         self.connected_device_interface = None
-        self.connected_device_ip_address = None
+        self.connected_device_mgmt_ip_address = None
         self.connected_device_hostname = None
+        self.gateway_mgmt_ip_address = None
+        self.gateway_hostname = None
         self.successful_devices = []
         self.failed_devices = []
+        self.bug = False
+        self.current_window = current_window
 
-        def mt(ip):
+        def mt(ip, index):
+            if index == 0:
+                self.current_window = w_running_discovery(self.current_window)
+            if self.bug:
+                self.current_window = w_windows_bug(self.current_window)
             conn = Connection(ip, username, password)
             session = conn.session
-            if discovery_type == 'Interface':
-                intf = Interface(session, query_value)
-                if intf.vlan is not None:
-                    self.host_vlan = intf.vlan
-                    self.connected_device_interface = intf.intf
-                    self.host_mac_address = query_value
-            if discovery_type == 'MACAddress':
-                mac_addr = MACAddress(session, query_value)
-                if mac_addr.l3_intf is not None:
-                    self.connected_device_l3_interface = mac_addr.l3_intf
-                    self.host_mac_address = mac_addr.mac_address
-                    self.host_ip_address = query_value
-            if discovery_type == 'IPAddress':
-                ip_addr = IPAddress(session, query_value).ip_address
-                if ip_addr is not None:
-                    self.host_ip_address = ip_addr
+            if input_type == 'IP_Address':
+                if self.host_mac_address is None:
+                    mac_addr = MACAddress(query_value, session)
+                    if mac_addr.l3_intf is not None:
+                        self.gateway_ip_address = mac_addr.l3_intf
+                        self.host_mac_address = mac_addr.mac_address
+                        self.host_ip_address = query_value
+                        self.gateway_hostname = conn.hostname
+                        self.gateway_mgmt_ip_address = ip
+                else:
+                    if self.host_vlan is None:
+                        intf = Interface(self.host_mac_address, session)
+                        if intf.vlan is not None:
+                            self.host_vlan = intf.vlan
+                            self.connected_device_interface = intf.intf
+                            self.connected_device_hostname = conn.hostname
+                            self.connected_device_mgmt_ip_address = ip
+            if input_type == 'MAC_Address':
+                if self.host_ip_address is None:
+                    ip_addr = IPAddress(query_value, session).ip_address
+                    if ip_addr is not None:
+                        self.host_ip_address = ip_addr
+                else:
+                    if self.host_mac_address is None:
+                        mac_addr = MACAddress(self.host_ip_address, session)
+                        if mac_addr.l3_intf is not None:
+                            self.gateway_ip_address = mac_addr.l3_intf
+                            self.host_mac_address = mac_addr.mac_address
+                            self.gateway_hostname = conn.hostname
+                            self.gateway_mgmt_ip_address = ip
+                    else:
+                        intf = Interface(self.host_mac_address, session)
+                        if intf.vlan is not None:
+                            self.host_vlan = intf.vlan
+                            self.connected_device_interface = intf.intf
+                            self.connected_device_hostname = conn.hostname
+                            self.connected_device_mgmt_ip_address = ip
             if conn.authorization:
                 self.successful_devices.append(ip)
             else:
@@ -102,6 +132,7 @@ class Discovery:
 
         while True:
             MultiThread(mt, mgmt_ip_list).mt()
-            bug = MultiThread(successful_devices=self.successful_devices, failed_devices=self.failed_devices).bug()
-            if not bug:
+            self.bug = MultiThread(
+                successful_devices=self.successful_devices, failed_devices=self.failed_devices).bug()
+            if not self.bug:
                 break

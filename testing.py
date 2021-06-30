@@ -1,8 +1,7 @@
 from getpass import getpass
 from gui import (
     gui_print, w_main, w_file_not_found, w_invalid_file_entry, button)
-from discovery import MACAddress
-from general import Connection, MgmtIPAddresses, MultiThread
+from discovery import Discovery
 
 import PySimpleGUI as Sg
 
@@ -16,10 +15,6 @@ if __name__ == '__main__':
             Sg.user_settings_set_entry('-filename-', values['file'])
             mgmt_file_location = values['file']
 
-
-
-            while True:
-                MultiThread()
         if event == Sg.WIN_CLOSED:
             break
 
