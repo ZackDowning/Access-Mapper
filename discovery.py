@@ -4,7 +4,7 @@ from ipaddress import IPv4Network, IPv4Interface
 from pprint import pp
 
 
-class MacAddressDiscovery:
+class InterfaceDiscovery:
     """Parses device to find vlan and interface of provided MAC Address"""
     def __init__(self, mac_address, session):
         self.vlan = None
@@ -35,8 +35,8 @@ class MacAddressDiscovery:
             pass
 
 
-class IPAddressDiscovery:
-    """Parses device to see if it is routing provided IP Addresses"""
+class MACAddressDiscovery:
+    """Parses device to see if it is routing provided IP Addresses to find MAC Address and L3 Interface"""
     def __init__(self, ip_address, session):
         self.l3_intf = None
         self.mac_address = None
@@ -48,5 +48,17 @@ class IPAddressDiscovery:
                 if any(str(host) == ip_address for host in IPv4Network(intf_network).hosts()):
                     self.l3_intf = intf['intf']
         if self.l3_intf is not None:
-            self.mac_address = session.send_command(
-                f'show ip arp {self.l3_intf} | include {ip_address}', use_textfsm=True)[0]['mac']
+            try:
+                self.mac_address = session.send_command(
+                    f'show ip arp {ip_address}', use_textfsm=True)[0]['mac']
+            except IndexError:
+                pass
+
+
+class IPAddressDiscovery:
+    """Parses device ARP table to find IP address for provided MAC address"""
+    def __init__(self, mac_address, session):
+        try:
+            self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
+        except IndexError:
+            self.ip_address = None
