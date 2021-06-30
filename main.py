@@ -14,7 +14,7 @@ if __name__ == '__main__':
             try:
                 Sg.user_settings_set_entry('-filename-', values['file'])
                 mgmt_file = MgmtIPAddresses(values['file'])
-                if mgmt_file.validate():
+                if mgmt_file.validate:
                     current_window.close()
                     layout2 = [
                         gui_print('Valid File'),
