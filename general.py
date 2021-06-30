@@ -17,9 +17,7 @@ class MgmtIPAddresses:
         self.mgmt_ips = []
         self.invalid_line_nums = []
         self.invalid_ip_addresses = []
-
-    def validate(self):
-        """Returns bool for file format validity and appends values to attributes"""
+        self.validate = False
         invalid_lines = 0
         with open(self.mgmt_file_location) as file:
             for idx, address in enumerate(file):
@@ -31,16 +29,13 @@ class MgmtIPAddresses:
                 else:
                     self.mgmt_ips.append(ip_address)
             if invalid_lines == 0:
-                return True
-            else:
-                return False
+                self.validate = True
 
 
 class Connection:
+    """SSH or TELNET Connection Initiator"""
     def __init__(self, ip_address, username, password):
         self.ip_address = ip_address
-        self.username = username
-        self.password = password
         self.hostname = ''
         self.devicetype = ''
         self.con_type = ''
@@ -48,31 +43,28 @@ class Connection:
         self.authentication = False
         self.authorization = False
         self.connectivity = False
-
-    def session(self):
-        """Returns SSH or TELNET Netmiko session and populates Connection attributes"""
-        session = None
+        self.session = None
         device = {
             'device_type': 'autodetect',
             'ip': self.ip_address,
-            'username': self.username,
-            'password': self.password
+            'username': username,
+            'password': password
         }
         try:
             try:
                 self.devicetype = SSHDetect(**device).autodetect()
                 device['device_type'] = self.devicetype
-                session = ConnectHandler(**device)
+                self.session = ConnectHandler(**device)
             except ValueError:
                 try:
                     device['device_type'] = 'cisco_ios'
                     self.devicetype = 'cisco_ios'
-                    session = ConnectHandler(**device)
+                    self.session = ConnectHandler(**device)
                 except ValueError:
                     device['device_type'] = 'cisco_ios'
                     self.devicetype = 'cisco_ios'
-                    session = ConnectHandler(**device)
-            showver = session.send_command('show version', use_textfsm=True)
+                    self.session = ConnectHandler(**device)
+            showver = self.session.send_command('show version', use_textfsm=True)
             if not showver.__contains__('Failed'):
                 self.hostname = showver[0]['hostname']
                 self.authorization = True
@@ -84,9 +76,9 @@ class Connection:
             try:
                 device['device_type'] = 'cisco_ios_telnet'
                 self.devicetype = 'cisco_ios_telnet'
-                device['secret'] = self.password
-                session = ConnectHandler(**device)
-                showver = session.send_command('show version', use_textfsm=True)
+                device['secret'] = password
+                self.session = ConnectHandler(**device)
+                showver = self.session.send_command('show version', use_textfsm=True)
                 if not showver.__contains__('Failed'):
                     self.hostname = showver[0]['hostname']
                     self.authorization = True
@@ -97,9 +89,9 @@ class Connection:
                 try:
                     device['device_type'] = 'cisco_ios_telnet'
                     self.devicetype = 'cisco_ios_telnet'
-                    device['secret'] = self.password
-                    session = ConnectHandler(**device)
-                    showver = session.send_command('show version', use_textfsm=True)
+                    device['secret'] = password
+                    self.session = ConnectHandler(**device)
+                    showver = self.session.send_command('show version', use_textfsm=True)
                     if not showver.__contains__('Failed'):
                         self.hostname = showver[0]['hostname']
                         self.authorization = True
@@ -127,29 +119,22 @@ class Connection:
                 self.exception = 'TimeoutError'
         except OSError:
             self.exception = 'OSError'
-        return session
 
 
 class MultiThread:
+    """Multithread Initiator"""
     def __init__(self, function, iterable, successful_devices, failed_devices, threads=50):
-        self.function = function
-        self.iterable = iterable
         self.successful_devices = successful_devices
-        """List of successful devices for function to append to for Windows PyInstaller bug checking"""
         self.failed_devices = failed_devices
-        """List of failed devices for function to append to for Windows PyInstaller bug checking"""
-        self.threads = threads
 
-    def mt(self):
-        """Runs function with iterable with multithreading using a default of 50 threads"""
         # While loop is to account for bug with Windows PyInstaller exe file dropping threads
         while True:
             self.successful_devices = []
             self.failed_devices = []
-            executor = concurrent.futures.ThreadPoolExecutor(self.threads)
-            futures = [executor.submit(self.function, val) for val in self.iterable]
+            executor = concurrent.futures.ThreadPoolExecutor(threads)
+            futures = [executor.submit(function, val) for val in iterable]
             concurrent.futures.wait(futures, timeout=None)
             successful = len(self.successful_devices)
             failed = len(self.failed_devices)
-            if (successful + failed) == len(self.iterable):
+            if (successful + failed) == len(iterable):
                 break
