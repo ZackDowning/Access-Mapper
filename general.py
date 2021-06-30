@@ -123,19 +123,32 @@ class Connection:
 
 class MultiThread:
     """Multithread Initiator"""
-    def __init__(self, function, iterable, successful_devices, failed_devices, threads):
+    def __init__(
+            self,
+            function=None,
+            iterable=None,
+            successful_devices=None,
+            failed_devices=None,
+            threads=50,
+            query_value=None,
+            username=None,
+            password=None
+    ):
         self.successful_devices = successful_devices
         self.failed_devices = failed_devices
         self.iterable = iterable
-        self.threads = 50
+        self.threads = threads
         self.function = function
+        self.query_value = query_value
+        self.username = username
+        self.password = password
 
-    def multithread(self):
+    def mt(self):
         executor = concurrent.futures.ThreadPoolExecutor(self.threads)
         futures = [executor.submit(self.function, val) for val in self.iterable]
         concurrent.futures.wait(futures, timeout=None)
 
-    def bug_check(self):
+    def bug(self):
         successful = len(self.successful_devices)
         failed = len(self.failed_devices)
         if (successful + failed) == len(self.iterable):

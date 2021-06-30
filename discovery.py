@@ -62,3 +62,45 @@ class IPAddress:
         except IndexError:
             self.ip_address = None
 
+
+class Discovery:
+    def __init__(self, discovery_type, mgmt_ip_list, query_value, username, password):
+        self.host_vlan = None
+        self.host_mac_address = None
+        self.host_ip_address = None
+        self.connected_device_l3_interface = None
+        self.connected_device_interface = None
+        self.connected_device_ip_address = None
+        self.connected_device_hostname = None
+        self.successful_devices = []
+        self.failed_devices = []
+
+        def mt(ip):
+            conn = Connection(ip, username, password)
+            session = conn.session
+            if discovery_type == 'Interface':
+                intf = Interface(session, query_value)
+                if intf.vlan is not None:
+                    self.host_vlan = intf.vlan
+                    self.connected_device_interface = intf.intf
+                    self.host_mac_address = query_value
+            if discovery_type == 'MACAddress':
+                mac_addr = MACAddress(session, query_value)
+                if mac_addr.l3_intf is not None:
+                    self.connected_device_l3_interface = mac_addr.l3_intf
+                    self.host_mac_address = mac_addr.mac_address
+                    self.host_ip_address = query_value
+            if discovery_type == 'IPAddress':
+                ip_addr = IPAddress(session, query_value).ip_address
+                if ip_addr is not None:
+                    self.host_ip_address = ip_addr
+            if conn.authorization:
+                self.successful_devices.append(ip)
+            else:
+                self.failed_devices.append(ip)
+
+        while True:
+            MultiThread(mt, mgmt_ip_list).mt()
+            bug = MultiThread(successful_devices=self.successful_devices, failed_devices=self.failed_devices).bug()
+            if not bug:
+                break
