@@ -1,10 +1,9 @@
-from general import MultiThread
 import re
 from ipaddress import IPv4Network, IPv4Interface
-from pprint import pp
+from general import Connection, MultiThread
 
 
-class InterfaceDiscovery:
+class Interface:
     """Parses device to find vlan and interface of provided MAC Address"""
     def __init__(self, mac_address, session):
         self.vlan = None
@@ -35,7 +34,7 @@ class InterfaceDiscovery:
             pass
 
 
-class MACAddressDiscovery:
+class MACAddress:
     """Parses device to see if it is routing provided IP Addresses to find MAC Address and L3 Interface"""
     def __init__(self, ip_address, session):
         self.l3_intf = None
@@ -55,10 +54,11 @@ class MACAddressDiscovery:
                 pass
 
 
-class IPAddressDiscovery:
+class IPAddress:
     """Parses device ARP table to find IP address for provided MAC address"""
     def __init__(self, mac_address, session):
         try:
             self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
         except IndexError:
             self.ip_address = None
+

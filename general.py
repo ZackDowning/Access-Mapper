@@ -123,18 +123,22 @@ class Connection:
 
 class MultiThread:
     """Multithread Initiator"""
-    def __init__(self, function, iterable, successful_devices, failed_devices, threads=50):
+    def __init__(self, function, iterable, successful_devices, failed_devices, threads):
         self.successful_devices = successful_devices
         self.failed_devices = failed_devices
+        self.iterable = iterable
+        self.threads = 50
+        self.function = function
 
-        # While loop is to account for bug with Windows PyInstaller exe file dropping threads
-        while True:
-            self.successful_devices = []
-            self.failed_devices = []
-            executor = concurrent.futures.ThreadPoolExecutor(threads)
-            futures = [executor.submit(function, val) for val in iterable]
-            concurrent.futures.wait(futures, timeout=None)
-            successful = len(self.successful_devices)
-            failed = len(self.failed_devices)
-            if (successful + failed) == len(iterable):
-                break
+    def multithread(self):
+        executor = concurrent.futures.ThreadPoolExecutor(self.threads)
+        futures = [executor.submit(self.function, val) for val in self.iterable]
+        concurrent.futures.wait(futures, timeout=None)
+
+    def bug_check(self):
+        successful = len(self.successful_devices)
+        failed = len(self.failed_devices)
+        if (successful + failed) == len(self.iterable):
+            return False
+        else:
+            return True
