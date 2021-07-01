@@ -25,12 +25,15 @@ if __name__ == '__main__':
     while True:
         print('1')
         event, values = current_window.read()
+        # testing
+        if discovery_finished:
+            event = 'Function Selection'
         if event == 'Main Page':
             discovery_finished = False
             discovery_init = False
             input_type = None
             current_window = w_main(current_window)
-        if event == 'Function Selection':
+        if event == 'Function Selection' and discovery_finished:
             discovery_finished = False
             discovery_init = False
             input_type = None
@@ -64,15 +67,17 @@ if __name__ == '__main__':
                 input_type = None
                 current_window = w_invalid_discovery_query(current_window)
         if discovery_init:
-            d = Discovery(current_window, input_type, mgmt_file.mgmt_ips, query_value, username, password)
-            current_window = d.current_window
+            # d = Discovery(current_window, input_type, mgmt_file.mgmt_ips, query_value, username, password)
+            # current_window = d.current_window
             discovery_finished = True
         if discovery_finished:
-            current_window = w_finished_discovery(
-                current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address, d.gateway_hostname,
-                d.gateway_mgmt_ip_address, d.host_vlan, d.connected_device_interface, d.connected_device_hostname,
-                d.connected_device_mgmt_ip_address
-            )
+            # current_window = w_finished_discovery(
+            #     current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address, d.gateway_hostname,
+            #     d.gateway_mgmt_ip_address, d.host_vlan, d.connected_device_interface, d.connected_device_hostname,
+            #     d.connected_device_mgmt_ip_address
+            # )
+            # testing
+            print(2)
         if event == Sg.WIN_CLOSED:
             break
 
