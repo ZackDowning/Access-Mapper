@@ -23,12 +23,15 @@ if __name__ == '__main__':
     discovery_finished = False
     d = None
     while True:
+        print('1')
         event, values = current_window.read()
         if event == 'Main Page':
+            discovery_finished = False
             discovery_init = False
             input_type = None
             current_window = w_main(current_window)
         if event == 'Function Selection':
+            discovery_finished = False
             discovery_init = False
             input_type = None
             current_window = w_function_selection(current_window)
@@ -50,10 +53,10 @@ if __name__ == '__main__':
             query_value = values[0]
             username = values[1]
             password = values[2]
-            if ipv4(values[0]):
+            if ipv4(query_value):
                 input_type = 'IP_Address'
                 discovery_init = True
-            elif macaddress(values[0]):
+            elif macaddress(query_value):
                 input_type = 'MAC_Address'
                 discovery_init = True
             else:
@@ -62,6 +65,7 @@ if __name__ == '__main__':
                 current_window = w_invalid_discovery_query(current_window)
         if discovery_init:
             d = Discovery(current_window, input_type, mgmt_file.mgmt_ips, query_value, username, password)
+            current_window = d.current_window
             discovery_finished = True
         if discovery_finished:
             current_window = w_finished_discovery(

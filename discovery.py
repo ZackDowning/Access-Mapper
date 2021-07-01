@@ -75,16 +75,16 @@ class Discovery:
         self.connected_device_hostname = None
         self.gateway_mgmt_ip_address = None
         self.gateway_hostname = None
-        self.successful_devices = []
-        self.failed_devices = []
         self.bug = False
         self.current_window = current_window
+        self.successful_devices = []
+        self.failed_devices = []
 
-        def mt(ip, index):
-            if index == 0:
-                self.current_window = w_running_discovery(self.current_window)
-            if self.bug:
-                self.current_window = w_windows_bug(self.current_window)
+        def mt(ip):
+            # if self.bug:
+            #     self.current_window = w_windows_bug(self.current_window)
+            # else:
+            #     self.current_window = w_running_discovery(self.current_window)
             conn = Connection(ip, username, password)
             session = conn.session
             if input_type == 'IP_Address':
@@ -131,8 +131,13 @@ class Discovery:
                 self.failed_devices.append(ip)
 
         while True:
-            MultiThread(mt, mgmt_ip_list).mt()
+            self.successful_devices = []
+            self.failed_devices = []
+            d = MultiThread(mt, mgmt_ip_list).mt()
             self.bug = MultiThread(
-                successful_devices=self.successful_devices, failed_devices=self.failed_devices).bug()
+                iterable=d.iterable,
+                successful_devices=self.successful_devices,
+                failed_devices=self.failed_devices
+            ).bug()
             if not self.bug:
                 break

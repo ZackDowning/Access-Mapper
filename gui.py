@@ -121,6 +121,10 @@ def w_invalid_discovery_query(current_window):
         gui_print('Invalid Discovery Query Value. Either invalid MAC Address or invalid IP Address'),
         gui_print('Enter IP Address or MAC Address of device to find details'),
         gui_input(),
+        gui_print('Network Username'),
+        gui_input(),
+        gui_print('Network Password'),
+        gui_password_input(''),
         button('Run Discovery')
     ]
     return Sg.Window(window_title, layout, margins=(100, 100))
