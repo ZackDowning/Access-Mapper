@@ -72,20 +72,9 @@ class Connection:
             self.connectivity = True
             self.con_type = 'SSH'
         except (ConnectionRefusedError, ValueError, ssh_exception.NetmikoAuthenticationException,
-                ssh_exception.NetmikoTimeoutException):
+                ssh_exception.NetmikoTimeoutException
+                ):
             try:
-                device['device_type'] = 'cisco_ios_telnet'
-                self.devicetype = 'cisco_ios_telnet'
-                device['secret'] = password
-                self.session = ConnectHandler(**device)
-                showver = self.session.send_command('show version', use_textfsm=True)
-                if not showver.__contains__('Failed'):
-                    self.hostname = showver[0]['hostname']
-                    self.authorization = True
-                self.authentication = True
-                self.connectivity = True
-                self.con_type = 'TELNET'
-            except ssh_exception.NetmikoAuthenticationException:
                 try:
                     device['device_type'] = 'cisco_ios_telnet'
                     self.devicetype = 'cisco_ios_telnet'
@@ -99,16 +88,20 @@ class Connection:
                     self.connectivity = True
                     self.con_type = 'TELNET'
                 except ssh_exception.NetmikoAuthenticationException:
+                    device['device_type'] = 'cisco_ios_telnet'
+                    self.devicetype = 'cisco_ios_telnet'
+                    device['secret'] = password
+                    self.session = ConnectHandler(**device)
+                    showver = self.session.send_command('show version', use_textfsm=True)
+                    if not showver.__contains__('Failed'):
+                        self.hostname = showver[0]['hostname']
+                        self.authorization = True
+                    self.authentication = True
                     self.connectivity = True
-                    self.exception = 'NetmikoAuthenticationException'
-                except ssh_exception.NetmikoTimeoutException:
-                    self.exception = 'NetmikoTimeoutException'
-                except ConnectionRefusedError:
-                    self.exception = 'ConnectionRefusedError'
-                except ValueError:
-                    self.exception = 'ValueError'
-                except TimeoutError:
-                    self.exception = 'TimeoutError'
+                    self.con_type = 'TELNET'
+            except ssh_exception.NetmikoAuthenticationException:
+                self.connectivity = True
+                self.exception = 'NetmikoAuthenticationException'
             except ssh_exception.NetmikoTimeoutException:
                 self.exception = 'NetmikoTimeoutException'
             except ConnectionRefusedError:
@@ -116,7 +109,7 @@ class Connection:
             except ValueError:
                 self.exception = 'ValueError'
             except TimeoutError:
-                self.exception = 'TimeoutError'
+                self.exception = '2.TimeoutError'
         except OSError:
             self.exception = 'OSError'
 
@@ -133,8 +126,10 @@ class MultiThread:
     """Executes multithreading on provided function and iterable"""
     def mt(self):
         executor = concurrent.futures.ThreadPoolExecutor(self.threads)
-        futures = [executor.submit(self.function, (val, index)) for (val, index) in enumerate(self.iterable)]
+        # futures = [executor.submit(self.function, (val, index)) for (val, index) in enumerate(self.iterable)]
+        futures = [executor.submit(self.function, val) for val in self.iterable]
         concurrent.futures.wait(futures, timeout=None)
+        return self
 
     """Returns bool if Windows PyInstaller bug is present with provided lists for successful and failed devices"""
     def bug(self):
