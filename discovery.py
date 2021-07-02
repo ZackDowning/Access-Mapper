@@ -120,6 +120,25 @@ class Discovery:
                                 ip_addr = IPAddress(query_value, session).ip_address
                                 if ip_addr is not None:
                                     self.host_ip_address = ip_addr
+                                    mac_addr = MACAddress(self.host_ip_address, session)
+                                    if mac_addr.gateway_ip is not None:
+                                        self.gateway_ip_address = mac_addr.gateway_ip
+                                        self.host_mac_address = mac_addr.mac_address
+                                        self.gateway_hostname = conn.hostname
+                                        self.gateway_mgmt_ip_address = ip
+                                        intf = Interface(self.host_mac_address, session)
+                                        if intf.vlan is not None:
+                                            self.host_vlan = intf.vlan
+                                            self.connected_device_interface = intf.intf
+                                            self.connected_device_hostname = conn.hostname
+                                            self.connected_device_mgmt_ip_address = ip
+                                            self.discovery_end_type = 'end'
+                                            self.thread_end = True
+                                        else:
+                                            self.discovery_end_type = 'cycle_end'
+                                    else:
+                                        self.discovery_end_type = 'cycle_end'
+
                             else:
                                 if self.host_mac_address is None:
                                     mac_addr = MACAddress(self.host_ip_address, session)
@@ -128,6 +147,16 @@ class Discovery:
                                         self.host_mac_address = mac_addr.mac_address
                                         self.gateway_hostname = conn.hostname
                                         self.gateway_mgmt_ip_address = ip
+                                        intf = Interface(self.host_mac_address, session)
+                                        if intf.vlan is not None:
+                                            self.host_vlan = intf.vlan
+                                            self.connected_device_interface = intf.intf
+                                            self.connected_device_hostname = conn.hostname
+                                            self.connected_device_mgmt_ip_address = ip
+                                            self.discovery_end_type = 'end'
+                                            self.thread_end = True
+                                        else:
+                                            self.discovery_end_type = 'cycle_end'
                                 else:
                                     intf = Interface(self.host_mac_address, session)
                                     if intf.vlan is not None:
@@ -135,6 +164,8 @@ class Discovery:
                                         self.connected_device_interface = intf.intf
                                         self.connected_device_hostname = conn.hostname
                                         self.connected_device_mgmt_ip_address = ip
+                                        self.discovery_end_type = 'end'
+                                        self.thread_end = True
                     else:
                         self.failed_devices.append(ip)
                 except OSError:
