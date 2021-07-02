@@ -55,7 +55,6 @@ class Connection:
                 self.devicetype = SSHDetect(**device).autodetect()
                 # if ip_address == '10.187.155.56':
                 #     print('1')
-                print('1')
                 device['device_type'] = self.devicetype
                 self.session = ConnectHandler(**device)
             except ValueError:
@@ -85,7 +84,6 @@ class Connection:
                     self.session = ConnectHandler(**device)
                     # if ip_address == '10.187.155.56':
                     #     print('2')
-                    print('2')
                     showver = self.session.send_command('show version', use_textfsm=True)
                     if not showver.__contains__('Failed'):
                         self.hostname = showver[0]['hostname']
@@ -111,7 +109,6 @@ class Connection:
             except ssh_exception.NetmikoTimeoutException:
                 # if ip_address == '10.187.155.56':
                 #     print('3')
-                print('3')
                 self.exception = 'NetmikoTimeoutException'
             except ConnectionRefusedError:
                 self.exception = 'ConnectionRefusedError'
@@ -120,7 +117,6 @@ class Connection:
             except TimeoutError:
                 # if ip_address == '10.187.155.56':
                 #     print('4')
-                print('4')
                 self.exception = 'TimeoutError'
         except OSError:
             self.exception = 'OSError'
