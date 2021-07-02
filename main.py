@@ -20,24 +20,9 @@ if __name__ == '__main__':
     query_value = None
     username = None
     password = None
-    discovery_finished = False
     d = None
     while True:
-        print('1')
         event, values = current_window.read()
-        # testing
-        if discovery_finished:
-            event = 'Function Selection'
-        if event == 'Main Page':
-            discovery_finished = False
-            discovery_init = False
-            input_type = None
-            current_window = w_main(current_window)
-        if event == 'Function Selection' and discovery_finished:
-            discovery_finished = False
-            discovery_init = False
-            input_type = None
-            current_window = w_function_selection(current_window)
         if event == 'Check File' or event == 'Retry':
             try:
                 Sg.user_settings_set_entry('-filename-', values['file'])
@@ -48,8 +33,13 @@ if __name__ == '__main__':
                     current_window = w_invalid_file_entry(current_window, mgmt_file)
             except FileNotFoundError:
                 current_window = w_file_not_found(current_window)
+        if event == 'Main Page':
+            input_type = None
+            current_window = w_main(current_window)
+        if event == 'Function Selection':
+            input_type = None
+            current_window = w_function_selection(current_window)
         if event == 'Endpoint Discovery':
-            discovery_init = False
             input_type = None
             current_window = w_discovery_query(current_window)
         if event == 'Run Discovery':
@@ -63,21 +53,17 @@ if __name__ == '__main__':
                 input_type = 'MAC_Address'
                 discovery_init = True
             else:
-                discovery_init = False
                 input_type = None
                 current_window = w_invalid_discovery_query(current_window)
         if discovery_init:
-            # d = Discovery(current_window, input_type, mgmt_file.mgmt_ips, query_value, username, password)
-            # current_window = d.current_window
-            discovery_finished = True
-        if discovery_finished:
-            # current_window = w_finished_discovery(
-            #     current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address, d.gateway_hostname,
-            #     d.gateway_mgmt_ip_address, d.host_vlan, d.connected_device_interface, d.connected_device_hostname,
-            #     d.connected_device_mgmt_ip_address
-            # )
-            # testing
-            print(2)
+            discovery_init = False
+            d = Discovery(input_type, mgmt_file.mgmt_ips, query_value, username, password)
+            current_window = w_finished_discovery(
+                current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address,
+                d.gateway_hostname, d.gateway_mgmt_ip_address, d.host_vlan,
+                d.connected_device_interface, d.connected_device_hostname,
+                d.connected_device_mgmt_ip_address)
+            current_window = current_window
         if event == Sg.WIN_CLOSED:
             break
 
