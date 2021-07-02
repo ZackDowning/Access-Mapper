@@ -188,11 +188,5 @@ class Discovery:
                     successful_devices=self.successful_devices,
                     failed_devices=self.failed_devices
                 ).bug()
-                print('successful: ' + str(len(self.successful_devices)))
-                print(self.successful_devices)
-                print('failed: ' + str(len(self.failed_devices)))
-                print('total' + str(len(d.iterable)))
                 if not self.bug:
                     break
-                else:
-                    print('bug')
