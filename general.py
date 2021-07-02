@@ -53,6 +53,9 @@ class Connection:
         try:
             try:
                 self.devicetype = SSHDetect(**device).autodetect()
+                # if ip_address == '10.187.155.56':
+                #     print('1')
+                print('1')
                 device['device_type'] = self.devicetype
                 self.session = ConnectHandler(**device)
             except ValueError:
@@ -80,6 +83,9 @@ class Connection:
                     self.devicetype = 'cisco_ios_telnet'
                     device['secret'] = password
                     self.session = ConnectHandler(**device)
+                    # if ip_address == '10.187.155.56':
+                    #     print('2')
+                    print('2')
                     showver = self.session.send_command('show version', use_textfsm=True)
                     if not showver.__contains__('Failed'):
                         self.hostname = showver[0]['hostname']
@@ -103,13 +109,19 @@ class Connection:
                 self.connectivity = True
                 self.exception = 'NetmikoAuthenticationException'
             except ssh_exception.NetmikoTimeoutException:
+                # if ip_address == '10.187.155.56':
+                #     print('3')
+                print('3')
                 self.exception = 'NetmikoTimeoutException'
             except ConnectionRefusedError:
                 self.exception = 'ConnectionRefusedError'
             except ValueError:
                 self.exception = 'ValueError'
             except TimeoutError:
-                self.exception = '2.TimeoutError'
+                # if ip_address == '10.187.155.56':
+                #     print('4')
+                print('4')
+                self.exception = 'TimeoutError'
         except OSError:
             self.exception = 'OSError'
 
@@ -126,7 +138,6 @@ class MultiThread:
     """Executes multithreading on provided function and iterable"""
     def mt(self):
         executor = concurrent.futures.ThreadPoolExecutor(self.threads)
-        # futures = [executor.submit(self.function, (val, index)) for (val, index) in enumerate(self.iterable)]
         futures = [executor.submit(self.function, val) for val in self.iterable]
         concurrent.futures.wait(futures, timeout=None)
         return self
