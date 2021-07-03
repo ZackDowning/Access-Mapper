@@ -130,24 +130,13 @@ def w_invalid_discovery_query(current_window):
     return Sg.Window(window_title, layout, margins=(100, 100))
 
 
-def w_running_discovery(current_window):
+def w_progress_bar(current_window, length):
     current_window.close()
-    layout = [
-        gui_print('Running Discovery...')
-    ]
-    current_window = Sg.Window(window_title, layout, margins=(100, 100))
-    current_window.read()
-    return current_window
-
-
-def w_windows_bug(current_window):
-    current_window.close()
-    layout = [
-        gui_print('Taking longer than expected due to Windows bug...')
-    ]
-    current_window = Sg.Window(window_title, layout, margins=(100, 100))
-    current_window.read()
-    return current_window
+    layout = [gui_print('Discovery Running'),
+              [Sg.ProgressBar(length, orientation='h', size=(20, 20), key='-PROG-')],
+              [Sg.Cancel()]
+              ]
+    return Sg.Window(window_title, layout, margins=(100, 100))
 
 
 def w_finished_discovery(
@@ -160,8 +149,7 @@ def w_finished_discovery(
         host_vlan,
         connected_device_interface,
         connected_device_hostname,
-        connected_device_mgmt_ip_address
-):
+        connected_device_mgmt_ip_address):
     current_window.close()
     layout = [
         gui_print(f'Host VLAN: {host_vlan}'),
