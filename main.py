@@ -13,16 +13,18 @@ from address_validator import ipv4, macaddress
 from discovery import Discovery
 
 if __name__ == '__main__':
-    current_window = w_main()
     discovery_init = False
+    discovery_finished = False
     input_type = None
     mgmt_file = None
     query_value = None
     username = None
     password = None
     d = None
+    current_window = w_main()
+
     while True:
-        event, values = current_window.read()
+        event, values = current_window.read(timeout=10)
         if event == 'Check File' or event == 'Retry':
             try:
                 Sg.user_settings_set_entry('-filename-', values['file'])
@@ -58,12 +60,14 @@ if __name__ == '__main__':
         if discovery_init:
             discovery_init = False
             d = Discovery(input_type, mgmt_file.mgmt_ips, query_value, username, password)
+            discovery_finished = True
+        if discovery_finished:
+            discovery_finished = False
             current_window = w_finished_discovery(
                 current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address,
                 d.gateway_hostname, d.gateway_mgmt_ip_address, d.host_vlan,
                 d.connected_device_interface, d.connected_device_hostname,
                 d.connected_device_mgmt_ip_address)
-            current_window = current_window
         if event == Sg.WIN_CLOSED:
             break
 
