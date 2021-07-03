@@ -130,11 +130,9 @@ def w_invalid_discovery_query(current_window):
     return Sg.Window(window_title, layout, margins=(100, 100))
 
 
-def w_progress_bar(current_window, length):
-    current_window.close()
+def w_progress_bar(length):
     layout = [gui_print('Discovery Running'),
-              [Sg.ProgressBar(length, orientation='h', size=(20, 20), key='-PROG-')],
-              [Sg.Cancel()]
+              [Sg.ProgressBar(length, orientation='h', size=(20, 20), key='-PROG-')]
               ]
     return Sg.Window(window_title, layout, margins=(100, 100))
 
