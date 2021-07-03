@@ -1,6 +1,6 @@
 import os
 import sys
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, wait
 from netmiko import ConnectHandler, ssh_exception, SSHDetect
 from address_validator import ipv4
 from icmplib import ping
@@ -9,6 +9,14 @@ if getattr(sys, 'frozen', False):
     os.environ['NET_TEXTFSM'] = sys._MEIPASS
 else:
     os.environ['NET_TEXTFSM'] = './working-files/templates'
+
+
+def mac_address_formatter(mac_address):
+    if '.' not in mac_address:
+        x = mac_address.replace(':', '').replace('-', '')
+        return f'{x[0:4]}.{x[4:8]}.{x[8:12]}'
+    else:
+        return mac_address
 
 
 class MgmtIPAddresses:
@@ -35,7 +43,7 @@ class MgmtIPAddresses:
 
 def reachability(ip_address):
     """Returns bool if host is reachable"""
-    return ping(ip_address, privileged=False).is_alive
+    return ping(ip_address, privileged=False, count=3).is_alive
 
 
 class Connection:
@@ -124,7 +132,7 @@ class Connection:
 
 class MultiThread:
     """Multithread Initiator"""
-    def __init__(self,  function=None, iterable=None, successful_devices=None, failed_devices=None, threads=50):
+    def __init__(self, function=None, iterable=None, successful_devices=None, failed_devices=None, threads=50):
         self.successful_devices = successful_devices
         self.failed_devices = failed_devices
         self.iterable = iterable
@@ -133,9 +141,9 @@ class MultiThread:
 
     """Executes multithreading on provided function and iterable"""
     def mt(self):
-        executor = concurrent.futures.ThreadPoolExecutor(self.threads)
+        executor = ThreadPoolExecutor(self.threads)
         futures = [executor.submit(self.function, val) for val in self.iterable]
-        concurrent.futures.wait(futures, timeout=None)
+        wait(futures, timeout=None)
         return self
 
     """Returns bool if Windows PyInstaller bug is present with provided lists for successful and failed devices"""

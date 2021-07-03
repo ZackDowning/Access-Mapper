@@ -1,35 +1,63 @@
 import re
 from ipaddress import IPv4Network, IPv4Interface
 from general import Connection, MultiThread
+import time
 
 
 class Interface:
     """Parses device to find vlan and interface of provided MAC Address"""
+
     def __init__(self, mac_address, session):
         self.vlan = None
         self.intf = None
         intfs = []
+        print('interface')
         try:
             show_int_sw = session.send_command('show interface switchport', use_textfsm=True)
             if show_int_sw[0].__contains__('switchport'):
-                for s_intf in show_int_sw:
+
+                def int_sw(s_intf):
                     if s_intf['mode'].__contains__('access'):
                         intfs.append(s_intf['interface'])
+                MultiThread(int_sw, show_int_sw).mt()
+                # for s_intf in show_int_sw:
+                #     if s_intf['mode'].__contains__('access'):
+                #         intfs.append(s_intf['interface'])
             cdp_nei = session.send_command('show cdp neighbor detail', use_textfsm=True)
-            for neighbor in cdp_nei:
+
+            def cdpnei(neighbor):
                 if neighbor['capabilities'].__contains__('Trans-Bridge'):
                     full_ap_l_intf = neighbor['local_port']
                     ap_l_intf = str(
                         re.findall(r'\S{2}', full_ap_l_intf)[0]) + str(re.findall(r'\d+\S+', full_ap_l_intf)[0])
                     if all(intf != ap_l_intf for intf in intfs):
                         intfs.append(ap_l_intf)
-            for intf in intfs:
-                show_mac = session.send_command(f'show mac address-table interface {intf}', use_textfsm=True)
+            MultiThread(cdpnei, cdp_nei).mt()
+            # for neighbor in cdp_nei:
+            #     if neighbor['capabilities'].__contains__('Trans-Bridge'):
+            #         full_ap_l_intf = neighbor['local_port']
+            #         ap_l_intf = str(
+            #             re.findall(r'\S{2}', full_ap_l_intf)[0]) + str(re.findall(r'\d+\S+', full_ap_l_intf)[0])
+            #         if all(intf != ap_l_intf for intf in intfs):
+            #             intfs.append(ap_l_intf)
+
+            show_mac = session.send_command(f'show mac address-table', use_textfsm=True)
+
+            def mac_intfs(mac):
                 if type(show_mac) is list:
-                    for mac in show_mac:
-                        if mac['destination_address'] == mac_address:
-                            self.vlan = mac['vlan']
-                            self.intf = intf
+                    intf = mac['destination_port']
+                    mac_intf = str(re.findall(r'\S{2}', intf)[0]) + str(re.findall(r'\d+\S+', intf)[0])
+                    if mac['destination_address'] == mac_address and any(x == mac_intf for x in intfs):
+                        self.vlan = mac['vlan']
+                        self.intf = mac_intf
+            MultiThread(mac_intfs, show_mac).mt()
+            # for intf in intfs:
+            #     show_mac = session.send_command(f'show mac address-table interface {intf}', use_textfsm=True)
+            #     if type(show_mac) is list:
+            #         for mac in show_mac:
+            #             if mac['destination_address'] == mac_address:
+            #                 self.vlan = mac['vlan']
+            #                 self.intf = intf
         except IndexError:
             pass
 
@@ -40,12 +68,21 @@ class MACAddress:
         self.gateway_ip = None
         self.mac_address = None
         show_ip_int = session.send_command('show ip interface', use_textfsm=True)
-        for intf in show_ip_int:
+        print('mac address')
+
+        def ip_int(intf):
             for ip_addr, prefix in zip(intf['ipaddr'], intf['mask']):
                 intf_ip = f'{ip_addr}/{prefix}'
                 intf_network = str(IPv4Interface(intf_ip).network)
                 if any(str(host) == ip_address for host in IPv4Network(intf_network).hosts()):
                     self.gateway_ip = ip_addr
+        MultiThread(ip_int, show_ip_int).mt()
+        # for intf in show_ip_int:
+        #     for ip_addr, prefix in zip(intf['ipaddr'], intf['mask']):
+        #         intf_ip = f'{ip_addr}/{prefix}'
+        #         intf_network = str(IPv4Interface(intf_ip).network)
+        #         if any(str(host) == ip_address for host in IPv4Network(intf_network).hosts()):
+        #             self.gateway_ip = ip_addr
         if self.gateway_ip is not None:
             try:
                 self.mac_address = session.send_command(
@@ -57,6 +94,7 @@ class MACAddress:
 class IPAddress:
     """Parses device ARP table to find IP address for provided MAC address"""
     def __init__(self, mac_address, session):
+        print('ip address')
         try:
             self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
         except IndexError:
@@ -96,16 +134,8 @@ class Discovery:
                                     self.host_ip_address = query_value
                                     self.gateway_hostname = conn.hostname
                                     self.gateway_mgmt_ip_address = ip
-                                    intf = Interface(self.host_mac_address, session)
-                                    if intf.vlan is not None:
-                                        self.host_vlan = intf.vlan
-                                        self.connected_device_interface = intf.intf
-                                        self.connected_device_hostname = conn.hostname
-                                        self.connected_device_mgmt_ip_address = ip
-                                        self.discovery_end_type = 'end'
-                                        self.thread_end = True
-                                    else:
-                                        self.discovery_end_type = 'cycle_end'
+                                    self.discovery_end_type = 'cycle_end'
+                                    self.thread_end = True
                             else:
                                 intf = Interface(self.host_mac_address, session)
                                 if intf.vlan is not None:
@@ -120,43 +150,19 @@ class Discovery:
                                 ip_addr = IPAddress(query_value, session).ip_address
                                 if ip_addr is not None:
                                     self.host_ip_address = ip_addr
-                                    mac_addr = MACAddress(self.host_ip_address, session)
-                                    if mac_addr.gateway_ip is not None:
-                                        self.gateway_ip_address = mac_addr.gateway_ip
-                                        self.host_mac_address = mac_addr.mac_address
-                                        self.gateway_hostname = conn.hostname
-                                        self.gateway_mgmt_ip_address = ip
-                                        intf = Interface(self.host_mac_address, session)
-                                        if intf.vlan is not None:
-                                            self.host_vlan = intf.vlan
-                                            self.connected_device_interface = intf.intf
-                                            self.connected_device_hostname = conn.hostname
-                                            self.connected_device_mgmt_ip_address = ip
-                                            self.discovery_end_type = 'end'
-                                            self.thread_end = True
-                                        else:
-                                            self.discovery_end_type = 'cycle_end'
-                                    else:
-                                        self.discovery_end_type = 'cycle_end'
-
+                                    self.discovery_end_type = 'cycle_end'
+                                    self.thread_end = True
                             else:
                                 if self.host_mac_address is None:
+                                    print('starting mac address')
                                     mac_addr = MACAddress(self.host_ip_address, session)
                                     if mac_addr.gateway_ip is not None:
                                         self.gateway_ip_address = mac_addr.gateway_ip
                                         self.host_mac_address = mac_addr.mac_address
                                         self.gateway_hostname = conn.hostname
                                         self.gateway_mgmt_ip_address = ip
-                                        intf = Interface(self.host_mac_address, session)
-                                        if intf.vlan is not None:
-                                            self.host_vlan = intf.vlan
-                                            self.connected_device_interface = intf.intf
-                                            self.connected_device_hostname = conn.hostname
-                                            self.connected_device_mgmt_ip_address = ip
-                                            self.discovery_end_type = 'end'
-                                            self.thread_end = True
-                                        else:
-                                            self.discovery_end_type = 'cycle_end'
+                                        self.discovery_end_type = 'cycle_end'
+                                        self.thread_end = True
                                 else:
                                     intf = Interface(self.host_mac_address, session)
                                     if intf.vlan is not None:
@@ -172,6 +178,7 @@ class Discovery:
                     self.failed_devices.append(ip)
                 self.thread_end = True
 
+        start = time.perf_counter()
         while True:
             self.thread_end = False
             self.successful_devices = []
@@ -190,3 +197,5 @@ class Discovery:
                 ).bug()
                 if not self.bug:
                     break
+        end = time.perf_counter()
+        print(f'Finished in {int(round(end - start, 0))} seconds\n')
