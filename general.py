@@ -68,17 +68,20 @@ class Connection:
         }
 
     def check(self):
-        print(self.ip_address)
         if reachability(self.ip_address):
             try:
                 try:
-                    self.devicetype = SSHDetect(**self.device).autodetect()
+                    autodetect = SSHDetect(**self.device).autodetect()
+                    self.device['device_type'] = autodetect
+                    self.devicetype = autodetect
                     self.session = ConnectHandler(**self.device)
                 except ValueError:
                     try:
+                        self.device['device_type'] = 'cisco_ios'
                         self.devicetype = 'cisco_ios'
                         self.session = ConnectHandler(**self.device)
                     except ValueError:
+                        self.device['device_type'] = 'cisco_ios'
                         self.devicetype = 'cisco_ios'
                         self.session = ConnectHandler(**self.device)
                 showver = self.session.send_command('show version', use_textfsm=True)
@@ -92,6 +95,7 @@ class Connection:
                     ssh_exception.NetmikoTimeoutException):
                 try:
                     try:
+                        self.device['device_type'] = 'cisco_ios_telnet'
                         self.devicetype = 'cisco_ios_telnet'
                         self.device['secret'] = self.password
                         self.session = ConnectHandler(**self.device)
@@ -103,6 +107,7 @@ class Connection:
                         self.connectivity = True
                         self.con_type = 'TELNET'
                     except ssh_exception.NetmikoAuthenticationException:
+                        self.device['device_type'] = 'cisco_ios_telnet'
                         self.devicetype = 'cisco_ios_telnet'
                         self.device['secret'] = self.password
                         self.session = ConnectHandler(**self.device)
@@ -131,7 +136,6 @@ class Connection:
         return self
 
     def connection(self):
-        print(self.ip_address)
         if reachability(self.ip_address):
             try:
                 if self.con_type == 'TELNET':

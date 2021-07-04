@@ -55,9 +55,10 @@ if __name__ == '__main__':
                 input_type = None
                 current_window = w_discovery_query(current_window)
             if event == 'Run Discovery':
+                Sg.user_settings_set_entry('-username-', values['user'])
                 query_value = values[0]
-                username = values[1]
-                password = values[2]
+                username = values['user']
+                password = values['pass']
                 if ipv4(query_value):
                     input_type = 'IP_Address'
                     discovery_init = True
@@ -69,7 +70,7 @@ if __name__ == '__main__':
                     input_type = None
                     current_window = w_invalid_discovery_query(current_window)
             if discovery_init:
-                bar_length = ((len(mgmt_file.mgmt_ips) * 12) * 2)
+                bar_length = (len(mgmt_file.mgmt_ips) * 10)
                 if getattr(sys, 'frozen', False):
                     main_file = 'access-mapper.exe'
                 else:
