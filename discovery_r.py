@@ -1,5 +1,6 @@
 import re
 from ipaddress import IPv4Network, IPv4Interface
+from pprint import pp
 from general import Connection, MultiThread
 import time
 
@@ -18,6 +19,7 @@ class Interface:
                 def int_sw(s_intf):
                     if s_intf['mode'].__contains__('access'):
                         intfs.append(s_intf['interface'])
+
                 MultiThread(int_sw, show_int_sw).mt()
             cdp_nei = session.send_command('show cdp neighbor detail', use_textfsm=True)
 
@@ -28,6 +30,7 @@ class Interface:
                         re.findall(r'\S{2}', full_ap_l_intf)[0]) + str(re.findall(r'\d+\S+', full_ap_l_intf)[0])
                     if all(intf != ap_l_intf for intf in intfs):
                         intfs.append(ap_l_intf)
+
             MultiThread(ap_intf, cdp_nei).mt()
             show_mac = session.send_command(f'show mac address-table', use_textfsm=True)
 
@@ -38,6 +41,7 @@ class Interface:
                     if mac['destination_address'] == mac_address and any(x == mac_intf for x in intfs):
                         self.vlan = mac['vlan']
                         self.intf = mac_intf
+
             MultiThread(vlan_intf, show_mac).mt()
         except IndexError:
             pass
@@ -45,6 +49,7 @@ class Interface:
 
 class MACAddress:
     """Parses device to see if it is routing provided IP Addresses to find MAC Address and L3 Interface"""
+
     def __init__(self, ip_address, session):
         self.gateway_ip = None
         self.mac_address = None
@@ -56,6 +61,7 @@ class MACAddress:
                 intf_network = str(IPv4Interface(intf_ip).network)
                 if any(str(host) == ip_address for host in IPv4Network(intf_network).hosts()):
                     self.gateway_ip = ip_addr
+
         MultiThread(gateway, show_ip_int).mt()
         if self.gateway_ip is not None:
             try:
@@ -67,16 +73,16 @@ class MACAddress:
 
 class IPAddress:
     """Parses device ARP table to find IP address for provided MAC address"""
+
     def __init__(self, mac_address, session):
         raw_arp_output = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)
-        if raw_arp_output.__contains__(mac_address):
-            try:
-                self.ip_address = raw_arp_output[0]['address']
-            except TypeError:
+        try:
+            self.ip_address = raw_arp_output[0]['address']
+        except (IndexError, TypeError):
+            if raw_arp_output.__contains__(mac_address):
                 self.ip_address = raw_arp_output.split('\n')[1].split('  ')[1]
-            # self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
-        else:
-            self.ip_address = None
+            else:
+                self.ip_address = None
 
 
 class Connectivity:
@@ -134,6 +140,7 @@ class Discovery:
         self.gateway_hostname = None
         self.bug = False
         self.discovery_finished = False
+        self.successful_cycle_devices = []
 
         def gateway_query(device):
             ip = device['ip']
@@ -144,7 +151,7 @@ class Discovery:
                 self.failed_devices.append(
                     {
                         'ip': ip,
-                        'hostname': session.hostname,
+                        'hostname': device['hostname'],
                         'con_type': session.con_type,
                         'device_type': session.devicetype,
                         'exception': session.exception
@@ -152,6 +159,14 @@ class Discovery:
                 )
                 self.successful_devices.remove(device)
             else:
+                self.successful_cycle_devices.append(
+                    {
+                        'ip': ip,
+                        'hostname': device['hostname'],
+                        'con_type': session.con_type,
+                        'device_type': session.devicetype
+                    }
+                )
                 mac_addr = MACAddress(self.host_ip_address, session.session)
                 if mac_addr.gateway_ip is not None:
                     self.gateway_ip_address = mac_addr.gateway_ip
@@ -168,7 +183,7 @@ class Discovery:
                 self.failed_devices.append(
                     {
                         'ip': ip,
-                        'hostname': session.hostname,
+                        'hostname': device['hostname'],
                         'con_type': session.con_type,
                         'device_type': session.devicetype,
                         'exception': session.exception
@@ -176,6 +191,14 @@ class Discovery:
                 )
                 self.successful_devices.remove(device)
             else:
+                self.successful_cycle_devices.append(
+                    {
+                        'ip': ip,
+                        'hostname': device['hostname'],
+                        'con_type': session.con_type,
+                        'device_type': session.devicetype
+                    }
+                )
                 intf = Interface(self.host_mac_address, session.session)
                 if intf.vlan is not None:
                     self.host_vlan = intf.vlan
@@ -192,7 +215,7 @@ class Discovery:
                 self.failed_devices.append(
                     {
                         'ip': ip,
-                        'hostname': session.hostname,
+                        'hostname': device['hostname'],
                         'con_type': session.con_type,
                         'device_type': session.devicetype,
                         'exception': session.exception
@@ -200,21 +223,35 @@ class Discovery:
                 )
                 self.successful_devices.remove(device)
             else:
-                if self.host_ip_address is None:
-                    ip_addr = IPAddress(query_value, session.session).ip_address
-                    if ip_addr is not None:
-                        self.host_ip_address = ip_addr
+                self.successful_cycle_devices.append(
+                    {
+                        'ip': ip,
+                        'hostname': device['hostname'],
+                        'con_type': session.con_type,
+                        'device_type': session.devicetype
+                    }
+                )
+                ip_addr = IPAddress(query_value, session.session).ip_address
+                if ip_addr is not None:
+                    self.host_ip_address = ip_addr
 
         def mt(function):
             while True:
+                self.successful_cycle_devices = []
                 MultiThread(function, self.successful_devices).mt()
                 self.bug = MultiThread(
                     iterable=mgmt_ip_list,
-                    successful_devices=self.successful_devices,
+                    successful_devices=self.successful_cycle_devices,
                     failed_devices=self.failed_devices
                 ).bug()
                 if not self.bug:
                     break
+                else:
+                    print('bug\n'
+                          f'Total: {len(mgmt_ip_list)}\n'
+                          f'Successful: {len(self.successful_cycle_devices)}\n'
+                          f'Original Successful: {len(self.successful_devices)}\n'
+                          f'Failed: {len(self.failed_devices)}')
 
         start = time.perf_counter()
         print('starting check')
@@ -240,7 +277,6 @@ class Discovery:
                     print('starting ip')
                     mt(ip_addr_query)
                     if self.host_ip_address is None:
-                        # TODO: Check why it's not finding mac address b4de.3160.dbf0
                         self.host_ip_address = 'Not Found. Required for discovery.'
                         self.discovery_finished = True
                 else:
@@ -256,3 +292,30 @@ class Discovery:
                         self.discovery_finished = True
         end = time.perf_counter()
         print(f'Finished in {int(round(end - start, 0))} seconds\n')
+
+
+# TODO: Fix current output
+"""
+starting check
+starting ip
+bug
+Total: 203
+Successful: 94
+Original Successful: 150
+Failed: 53
+bug
+Total: 203
+Successful: 12
+Original Successful: 150
+Failed: 53
+bug
+Total: 203
+Successful: 0
+Original Successful: 150
+Failed: 53
+bug
+Total: 203
+Successful: 0
+Original Successful: 150
+Failed: 53
+"""

@@ -76,9 +76,9 @@ if __name__ == '__main__':
                 else:
                     main_file = 'python3 main.py'
                 subprocess_run = subprocess.Popen(f'{main_file} -l {bar_length}', shell=True)
-                discovery_init = False
                 current_window.close()
                 d = Discovery(query_value, input_type, mgmt_file.mgmt_ips, username, password)
+                discovery_init = False
                 discovery_finished = True
                 subprocess_run.terminate()
             if discovery_finished:
