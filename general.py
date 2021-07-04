@@ -68,7 +68,6 @@ class Connection:
         }
 
     def check(self):
-        print(self.ip_address)
         if reachability(self.ip_address):
             try:
                 try:
@@ -137,7 +136,6 @@ class Connection:
         return self
 
     def connection(self):
-        print(self.ip_address)
         if reachability(self.ip_address):
             try:
                 if self.con_type == 'TELNET':
