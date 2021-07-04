@@ -13,7 +13,7 @@ from gui import (
 import PySimpleGUI as Sg
 from general import MgmtIPAddresses, mac_address_formatter
 from address_validator import ipv4, macaddress
-from discovery_r import Discovery
+from discovery import Discovery
 # from discovery import Discovery
 from argparse import ArgumentParser
 import sys

@@ -1,5 +1,5 @@
 from general import Connection
-from discovery_r import IPAddress, Connectivity
+from discovery import IPAddress, Connectivity
 from getpass import getpass
 from pprint import pp
 
