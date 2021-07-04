@@ -43,7 +43,7 @@ class MgmtIPAddresses:
 
 def reachability(ip_address):
     """Returns bool if host is reachable"""
-    return ping(ip_address, privileged=False, count=3).is_alive
+    return ping(ip_address, privileged=False, count=4).is_alive
 
 
 class Connection:
@@ -131,6 +131,8 @@ class Connection:
                     self.exception = 'TimeoutError'
             except OSError:
                 self.exception = 'OSError'
+            if self.session is not None:
+                self.session.disconnect()
         else:
             self.exception = 'NoPingEcho'
         return self
