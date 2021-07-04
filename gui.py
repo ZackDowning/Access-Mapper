@@ -22,11 +22,15 @@ def gui_print_box(string, font=m_font, size=(20, 100)):
 
 
 def gui_input(default_string='', font=m_font):
-    return [Sg.InputText(font=font, default_text=str(default_string))]
+    return [Sg.InputText(str(default_string), font=font)]
+
+
+def gui_user_input(font=m_font):
+    return [Sg.Input(Sg.user_settings_get_entry('-username-', ''), key='user', font=font)]
 
 
 def gui_password_input(default_string='', font=m_font):
-    return [Sg.InputText(password_char='*', font=font, default_text=str(default_string))]
+    return [Sg.InputText(str(default_string), key='pass', password_char='*', font=font)]
 
 
 def button(string, font=m_font):
@@ -106,7 +110,7 @@ def w_discovery_query(current_window):
         gui_print('Enter IP Address or MAC Address of device to find details'),
         gui_input(),
         gui_print('Network Username'),
-        gui_input(),
+        gui_user_input(),
         gui_print('Network Password'),
         gui_password_input(''),
         button('Run Discovery')
@@ -122,7 +126,7 @@ def w_invalid_discovery_query(current_window):
         gui_print('Enter IP Address or MAC Address of device to find details'),
         gui_input(),
         gui_print('Network Username'),
-        gui_input(),
+        gui_user_input(),
         gui_print('Network Password'),
         gui_password_input(''),
         button('Run Discovery')
