@@ -13,7 +13,8 @@ from gui import (
 import PySimpleGUI as Sg
 from general import MgmtIPAddresses, mac_address_formatter
 from address_validator import ipv4, macaddress
-from discovery import Discovery
+from discovery_r import Discovery
+# from discovery import Discovery
 from argparse import ArgumentParser
 import sys
 
@@ -76,7 +77,7 @@ if __name__ == '__main__':
                 subprocess_run = subprocess.Popen(f'{main_file} -l {bar_length}', shell=True)
                 discovery_init = False
                 current_window.close()
-                d = Discovery(input_type, mgmt_file.mgmt_ips, query_value, username, password)
+                d = Discovery(query_value, input_type, mgmt_file.mgmt_ips, username, password)
                 discovery_finished = True
                 subprocess_run.terminate()
             if discovery_finished:
