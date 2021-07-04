@@ -68,9 +68,14 @@ class MACAddress:
 class IPAddress:
     """Parses device ARP table to find IP address for provided MAC address"""
     def __init__(self, mac_address, session):
-        try:
-            self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
-        except IndexError:
+        raw_arp_output = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)
+        if raw_arp_output.__contains__(mac_address):
+            try:
+                self.ip_address = raw_arp_output[0]['address']
+            except TypeError:
+                self.ip_address = raw_arp_output.split('\n')[1].split('  ')[1]
+            # self.ip_address = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)[0]['address']
+        else:
             self.ip_address = None
 
 
@@ -109,6 +114,11 @@ class Connectivity:
             ).bug()
             if not bug:
                 break
+            else:
+                print('bug\n'
+                      f'Total: {len(d.iterable)}\n'
+                      f'Successful: {len(self.successful_devices)}\n'
+                      f'Failed: {len(self.failed_devices)}')
 
 
 class Discovery:
@@ -207,6 +217,7 @@ class Discovery:
                     break
 
         start = time.perf_counter()
+        print('starting check')
         con_check = Connectivity(mgmt_ip_list, username, password)
         self.successful_devices = con_check.successful_devices
         self.failed_devices = con_check.failed_devices
@@ -214,26 +225,33 @@ class Discovery:
             if input_type == 'IP_Address':
                 self.host_ip_address = query_value
                 if self.host_mac_address is None:
+                    print('starting gw')
                     mt(gateway_query)
+                    # TODO: Create function to find mac address from arp table or update MACAddress
                     if self.host_mac_address is None:
                         self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                         self.discovery_finished = True
                 else:
+                    print('starting intf')
                     mt(intf_vlan_query)
                     self.discovery_finished = True
             if input_type == 'MAC_Address':
                 if self.host_ip_address is None:
+                    print('starting ip')
                     mt(ip_addr_query)
                     if self.host_ip_address is None:
+                        # TODO: Check why it's not finding mac address b4de.3160.dbf0
                         self.host_ip_address = 'Not Found. Required for discovery.'
                         self.discovery_finished = True
                 else:
                     if self.host_mac_address is None:
+                        print('starting gw')
                         mt(gateway_query)
                         if self.host_mac_address is None:
                             self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                             self.discovery_finished = True
                     else:
+                        print('starting intf')
                         mt(intf_vlan_query)
                         self.discovery_finished = True
         end = time.perf_counter()
