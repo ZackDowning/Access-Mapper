@@ -173,6 +173,7 @@ class Discovery:
                     self.host_mac_address = mac_addr.mac_address
                     self.gateway_hostname = device['hostname']
                     self.gateway_mgmt_ip_address = ip
+                session.session.disconnect()
 
         def intf_vlan_query(device):
             ip = device['ip']
@@ -205,6 +206,7 @@ class Discovery:
                     self.connected_device_interface = intf.intf
                     self.connected_device_hostname = device['hostname']
                     self.connected_device_mgmt_ip_address = ip
+                session.session.disconnect()
 
         def ip_addr_query(device):
             ip = device['ip']
@@ -234,6 +236,7 @@ class Discovery:
                 ip_addr = IPAddress(query_value, session.session).ip_address
                 if ip_addr is not None:
                     self.host_ip_address = ip_addr
+                session.session.disconnect()
 
         def mt(function):
             while True:
