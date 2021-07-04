@@ -48,37 +48,39 @@ def reachability(ip_address):
 
 class Connection:
     """SSH or TELNET Connection Initiator"""
-    def __init__(self, ip_address, username, password):
+    def __init__(self, ip_address, username, password, devicetype='autodetect', con_type=None):
         self.ip_address = ip_address
+        self.username = username
+        self.password = password
         self.hostname = ''
-        self.devicetype = ''
-        self.con_type = ''
+        self.devicetype = devicetype
+        self.con_type = con_type
         self.exception = 'None'
         self.authentication = False
         self.authorization = False
         self.connectivity = False
         self.session = None
-        device = {
-            'device_type': 'autodetect',
-            'ip': self.ip_address,
+        self.device = {
+            'device_type': self.devicetype,
+            'ip': ip_address,
             'username': username,
             'password': password
         }
-        if reachability(ip_address):
+
+    def check(self):
+        print(self.ip_address)
+        if reachability(self.ip_address):
             try:
                 try:
-                    self.devicetype = SSHDetect(**device).autodetect()
-                    device['device_type'] = self.devicetype
-                    self.session = ConnectHandler(**device)
+                    self.devicetype = SSHDetect(**self.device).autodetect()
+                    self.session = ConnectHandler(**self.device)
                 except ValueError:
                     try:
-                        device['device_type'] = 'cisco_ios'
                         self.devicetype = 'cisco_ios'
-                        self.session = ConnectHandler(**device)
+                        self.session = ConnectHandler(**self.device)
                     except ValueError:
-                        device['device_type'] = 'cisco_ios'
                         self.devicetype = 'cisco_ios'
-                        self.session = ConnectHandler(**device)
+                        self.session = ConnectHandler(**self.device)
                 showver = self.session.send_command('show version', use_textfsm=True)
                 if not showver.__contains__('Failed'):
                     self.hostname = showver[0]['hostname']
@@ -90,10 +92,9 @@ class Connection:
                     ssh_exception.NetmikoTimeoutException):
                 try:
                     try:
-                        device['device_type'] = 'cisco_ios_telnet'
                         self.devicetype = 'cisco_ios_telnet'
-                        device['secret'] = password
-                        self.session = ConnectHandler(**device)
+                        self.device['secret'] = self.password
+                        self.session = ConnectHandler(**self.device)
                         showver = self.session.send_command('show version', use_textfsm=True)
                         if not showver.__contains__('Failed'):
                             self.hostname = showver[0]['hostname']
@@ -102,10 +103,9 @@ class Connection:
                         self.connectivity = True
                         self.con_type = 'TELNET'
                     except ssh_exception.NetmikoAuthenticationException:
-                        device['device_type'] = 'cisco_ios_telnet'
                         self.devicetype = 'cisco_ios_telnet'
-                        device['secret'] = password
-                        self.session = ConnectHandler(**device)
+                        self.device['secret'] = self.password
+                        self.session = ConnectHandler(**self.device)
                         showver = self.session.send_command('show version', use_textfsm=True)
                         if not showver.__contains__('Failed'):
                             self.hostname = showver[0]['hostname']
@@ -128,6 +128,32 @@ class Connection:
                 self.exception = 'OSError'
         else:
             self.exception = 'NoPingEcho'
+        return self
+
+    def connection(self):
+        print(self.ip_address)
+        if reachability(self.ip_address):
+            try:
+                if self.con_type == 'TELNET':
+                    self.device['secret'] = self.password
+                    self.session = ConnectHandler(**self.device)
+                else:
+                    self.session = ConnectHandler(**self.device)
+            except ConnectionRefusedError:
+                self.exception = 'ConnectionRefusedError'
+            except ssh_exception.NetmikoAuthenticationException:
+                self.exception = 'NetmikoAuthenticationException'
+            except ssh_exception.NetmikoTimeoutException:
+                self.exception = 'NetmikoTimeoutException'
+            except ValueError:
+                self.exception = 'ValueError'
+            except TimeoutError:
+                self.exception = 'TimeoutError'
+            except OSError:
+                self.exception = 'OSError'
+        else:
+            self.exception = 'NoPingEcho'
+        return self
 
 
 class MultiThread:
