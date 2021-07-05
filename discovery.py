@@ -1,13 +1,13 @@
 import re
 from ipaddress import IPv4Network, IPv4Interface
-from pprint import pp
 from general import Connection, MultiThread
 import time
+
+# TODO: Add menu to just find specific info about device
 
 
 class Interface:
     """Parses device to find vlan and interface of provided MAC Address"""
-
     def __init__(self, mac_address, session):
         self.vlan = None
         self.intf = None
@@ -49,7 +49,6 @@ class Interface:
 
 class MACAddress:
     """Parses device to see if it is routing provided IP Addresses to find MAC Address and L3 Interface"""
-
     def __init__(self, ip_address, session):
         self.gateway_ip = None
         self.mac_address = None
@@ -73,7 +72,6 @@ class MACAddress:
 
 class IPAddress:
     """Parses device ARP table to find IP address for provided MAC address"""
-
     def __init__(self, mac_address, session):
         raw_arp_output = session.send_command(f'show ip arp {mac_address}', use_textfsm=True)
         try:
@@ -120,11 +118,6 @@ class Connectivity:
             ).bug()
             if not bug:
                 break
-            else:
-                print('bug\n'
-                      f'Total: {len(d.iterable)}\n'
-                      f'Successful: {len(self.successful_devices)}\n'
-                      f'Failed: {len(self.failed_devices)}')
 
 
 class Discovery:
@@ -249,15 +242,7 @@ class Discovery:
                 ).bug()
                 if not self.bug:
                     break
-                else:
-                    print('bug\n'
-                          f'Total: {len(mgmt_ip_list)}\n'
-                          f'Successful: {len(self.successful_cycle_devices)}\n'
-                          f'Original Successful: {len(self.successful_devices)}\n'
-                          f'Failed: {len(self.failed_devices)}')
 
-        start = time.perf_counter()
-        print('starting check')
         con_check = Connectivity(mgmt_ip_list, username, password)
         self.successful_devices = con_check.successful_devices
         self.failed_devices = con_check.failed_devices
@@ -265,60 +250,32 @@ class Discovery:
             if input_type == 'IP_Address':
                 self.host_ip_address = query_value
                 if self.host_mac_address is None:
-                    print('starting gw')
+                    time.sleep(5)
                     mt(gateway_query)
                     # TODO: Create function to find mac address from arp table or update MACAddress
                     if self.host_mac_address is None:
                         self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                         self.discovery_finished = True
                 else:
-                    print('starting intf')
+                    time.sleep(5)
                     mt(intf_vlan_query)
                     self.discovery_finished = True
             if input_type == 'MAC_Address':
                 if self.host_ip_address is None:
-                    print('starting ip')
+                    time.sleep(5)
                     mt(ip_addr_query)
                     if self.host_ip_address is None:
                         self.host_ip_address = 'Not Found. Required for discovery.'
                         self.discovery_finished = True
                 else:
                     if self.host_mac_address is None:
-                        print('starting gw')
+                        time.sleep(5)
                         mt(gateway_query)
+                        # TODO: Update to just use MAC Address from entry
                         if self.host_mac_address is None:
                             self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                             self.discovery_finished = True
                     else:
-                        print('starting intf')
+                        time.sleep(5)
                         mt(intf_vlan_query)
                         self.discovery_finished = True
-        end = time.perf_counter()
-        print(f'Finished in {int(round(end - start, 0))} seconds\n')
-
-
-# TODO: Fix current output
-"""
-starting check
-starting ip
-bug
-Total: 203
-Successful: 94
-Original Successful: 150
-Failed: 53
-bug
-Total: 203
-Successful: 12
-Original Successful: 150
-Failed: 53
-bug
-Total: 203
-Successful: 0
-Original Successful: 150
-Failed: 53
-bug
-Total: 203
-Successful: 0
-Original Successful: 150
-Failed: 53
-"""
