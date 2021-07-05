@@ -3,8 +3,6 @@ from ipaddress import IPv4Network, IPv4Interface
 from general import Connection, MultiThread
 import time
 
-# TODO: Add menu to just find specific info about device
-
 
 class Interface:
     """Parses device to find vlan and interface of provided MAC Address"""
@@ -270,7 +268,6 @@ class Discovery:
                     if self.host_mac_address is None:
                         time.sleep(5)
                         mt(gateway_query)
-                        # TODO: Update to just use MAC Address from entry
                         if self.host_mac_address is None:
                             self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                             self.discovery_finished = True
