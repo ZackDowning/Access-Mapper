@@ -23,6 +23,7 @@ import sys
 # TODO: Add VLAN change based on IP Address or MAC Address
 # TODO: Add comments
 # TODO: Update discovery with MAC address input to not depend on finding MAC address on device router
+# TODO: Add menu to just find specific info about device
 
 if __name__ == '__main__':
     parser = ArgumentParser()
