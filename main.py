@@ -19,8 +19,10 @@ import sys
 
 # PyInstaller bundle command:
 # pyinstaller -w -F --hidden-import PySimpleGUI --add-data templates;templates main.py
+# TODO: Add NX-OS command compatability
 # TODO: Add VLAN change based on IP Address or MAC Address
 # TODO: Add comments
+# TODO: Update discovery with MAC address input to not depend on finding MAC address on device router
 
 if __name__ == '__main__':
     parser = ArgumentParser()
