@@ -14,9 +14,13 @@ import PySimpleGUI as Sg
 from general import MgmtIPAddresses, mac_address_formatter
 from address_validator import ipv4, macaddress
 from discovery import Discovery
-# from discovery import Discovery
 from argparse import ArgumentParser
 import sys
+
+# PyInstaller bundle command:
+# pyinstaller -w -F --hidden-import PySimpleGUI --add-data templates;templates main.py
+# TODO: Add VLAN change based on IP Address or MAC Address
+# TODO: Add comments
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -70,7 +74,10 @@ if __name__ == '__main__':
                     input_type = None
                     current_window = w_invalid_discovery_query(current_window)
             if discovery_init:
-                bar_length = (len(mgmt_file.mgmt_ips) * 10)
+                if len(mgmt_file.mgmt_ips) > 50:
+                    bar_length = int(round(len(mgmt_file.mgmt_ips) / 50, 0) * 80)
+                else:
+                    bar_length = 80
                 if getattr(sys, 'frozen', False):
                     main_file = 'access-mapper.exe'
                 else:

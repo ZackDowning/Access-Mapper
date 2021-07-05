@@ -8,7 +8,7 @@ from icmplib import ping
 if getattr(sys, 'frozen', False):
     os.environ['NET_TEXTFSM'] = sys._MEIPASS
 else:
-    os.environ['NET_TEXTFSM'] = './working-files/templates'
+    os.environ['NET_TEXTFSM'] = './templates'
 
 
 def mac_address_formatter(mac_address):
