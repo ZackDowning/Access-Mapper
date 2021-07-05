@@ -252,7 +252,6 @@ class Discovery:
                 if self.host_mac_address is None:
                     time.sleep(5)
                     mt(gateway_query)
-                    # TODO: Create function to find mac address from arp table or update MACAddress
                     if self.host_mac_address is None:
                         self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
                         self.discovery_finished = True
