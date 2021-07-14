@@ -19,16 +19,19 @@ import sys
 
 # PyInstaller bundle command:
 # pyinstaller -w -F --hidden-import PySimpleGUI --add-data templates;templates main.py
-# TODO: Add NX-OS command compatability
-# TODO: Add VLAN change based on IP Address or MAC Address
 # TODO: Add comments
 # TODO: Update discovery with MAC address input to not depend on finding MAC address on device router
 # TODO: Add menu to just find specific info about device
+# TODO: Add VLAN change based on IP Address or MAC Address - device provisioning
+#   TODO: Allow manual input of switch management IP and interface to change
+#   TODO: Allow manual text input or selecting from dropdown
 
 if __name__ == '__main__':
+    # Parses argument to check length of progress bar for progress bar window subprocess
     parser = ArgumentParser()
     parser.add_argument('-l', dest='length')
     bar_length = parser.parse_args().length
+
     if bar_length is None:
         discovery_init = False
         discovery_finished = False
@@ -101,7 +104,9 @@ if __name__ == '__main__':
             if event == Sg.WIN_CLOSED:
                 break
         current_window.close()
+
     else:
+        # PySimpleGUI Progressbar for subprocess
         bar_length = int(bar_length) * 4
         current_window = w_progress_bar(bar_length)
         bar_progress = 0
