@@ -1,5 +1,6 @@
 import subprocess
 import time
+from math import ceil
 from gui import (
     w_main,
     w_file_not_found,
@@ -81,7 +82,7 @@ if __name__ == '__main__':
                     current_window = w_invalid_discovery_query(current_window)
             if discovery_init:
                 if len(mgmt_file.mgmt_ips) > 50:
-                    bar_length = int(round(len(mgmt_file.mgmt_ips) / 50, 0) * 80)
+                    bar_length = int(ceil(len(mgmt_file.mgmt_ips) / 50) * 70)
                 else:
                     bar_length = 80
                 if getattr(sys, 'frozen', False):
@@ -118,7 +119,10 @@ if __name__ == '__main__':
         for i in range(bar_length - 1):
             time.sleep(0.25)
             bar_progress += 1
-            event, values = current_window.read(timeout=10)
-            current_window['-PROG-'].update(bar_progress)
+            if i == bar_length - 2:
+                event, values = current_window.read()
+            else:
+                event, values = current_window.read(timeout=10)
+                current_window['-PROG-'].update(bar_progress)
             if event == Sg.WIN_CLOSED:
                 break
