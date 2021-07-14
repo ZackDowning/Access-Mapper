@@ -2,15 +2,17 @@ import time
 import re
 from ipaddress import IPv4Network, IPv4Interface
 from general import Connection, MultiThread, interface_formatter
+from address_validator import ipv4
+# from pprint import pp
 
 
 class Interface:
     """Parses device to find VLAN and interface of provided MAC Address\n
     Returns self attributes:\n
-    vlan
-    intf
+    vlan\n
+    intf\n
     Defaults = None"""
-    def __init__(self, mac_address, session):
+    def __init__(self, mac_address, session, devicetype):
         self.vlan = None
         self.intf = None
         intfs = []
@@ -18,6 +20,7 @@ class Interface:
             # Appends active access interfaces to 'intf' set
             show_int_sw = session.send_command('show interface switchport', use_textfsm=True)
             if show_int_sw[0].__contains__('switchport'):
+
                 def int_sw(s_intf):
                     if s_intf['mode'].__contains__('access'):
                         intfs.append(interface_formatter(s_intf['interface']))
@@ -39,7 +42,7 @@ class Interface:
 
             # Checks all MAC addresses in CAM table if interface is an access interface and MAC address is equal
             # to input MAC address
-            if session.devicetype == 'cisco_nxos':
+            if devicetype == 'cisco_nxos':
                 output = session.send_command(f'show mac address-table | i */').split('\n')
                 show_mac = []
                 for idx, line in enumerate(output):
@@ -56,7 +59,7 @@ class Interface:
 
             def vlan_intf(mac):
                 # Formats interface string into same format as default from 'show_int_sw'
-                mac_intf = interface_formatter(['destination_port'])
+                mac_intf = interface_formatter(mac['destination_port'])
                 if mac['destination_address'] == mac_address and any(x == mac_intf for x in intfs):
                     self.vlan = mac['vlan']
                     self.intf = mac_intf
@@ -69,17 +72,19 @@ class Interface:
 class Gateway:
     """Parses device to see if it is routing provided IP Addresses to find MAC Address and L3 Interface\n
     Returns self attributes:\n
-    gateway_ip
-    mac_address
+    gateway_ip\n
+    mac_address\n
+    subnet_mask\n
+    network\n
     Defaults = None"""
-    def __init__(self, ip_address, session):
+    def __init__(self, ip_address, session, devicetype):
         self.gateway_ip = None
         self.mac_address = None
         self.subnet_mask = None
         self.network = None
 
         # Checks if any input IP address is within the subnet of any IP interface
-        if session.devicetype == 'cisco_nxos':
+        if devicetype == 'cisco_nxos':
             output = session.send_command('show ip interface').split('\n')
             show_ip_int = []
             for line in output:
@@ -95,7 +100,7 @@ class Gateway:
             show_ip_int = session.send_command('show ip interface', use_textfsm=True)
 
         def gateway(intf):
-            if session.devicetype == 'cisco_nxos':
+            if devicetype == 'cisco_nxos':
                 # Set of all valid IP addresses within interface network
                 intf_network = intf['network']
                 net = IPv4Network(intf_network)
@@ -127,6 +132,7 @@ class Gateway:
                 self.mac_address = None
                 self.gateway_ip = None
                 self.subnet_mask = None
+                self.network = None
 
 
 class IPAddress:
@@ -134,11 +140,11 @@ class IPAddress:
     Returns self attributes:\n
     ip_address\n
     Default = None"""
-    def __init__(self, mac_address, session):
-        if session.devicetype == 'cisco_nxos':
-            raw_arp_output = session.send_command(f'show ip arp | i {mac_address}', use_textfsm=True)
+    def __init__(self, mac_address, session, devicetype):
+        if devicetype == 'cisco_nxos':
+            raw_arp_output = session.send_command(f'show ip arp | i {mac_address}').split('\n')[0]
             try:
-                self.ip_address = re.split(r' +', raw_arp_output)[2]
+                self.ip_address = re.split(r' +', raw_arp_output)[0]
             except (IndexError, TypeError):
                 self.ip_address = None
         else:
@@ -201,6 +207,8 @@ class Connectivity:
             ).bug()
             if not bug:
                 break
+            else:
+                time.sleep(7)
 
 
 class Discovery:
@@ -244,15 +252,15 @@ class Discovery:
             ip = device['ip']
             device_type = device['device_type']
             con_type = device['con_type']
-            session = Connection(ip, username, password, device_type, con_type).connection()
-            if session.session is None:
+            connection = Connection(ip, username, password, device_type, con_type).connection()
+            if connection.session is None:
                 self.failed_devices.append(
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype,
-                        'exception': session.exception
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype,
+                        'exception': connection.exception
                     }
                 )
                 self.successful_devices.remove(device)
@@ -261,11 +269,11 @@ class Discovery:
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype
                     }
                 )
-                gw = Gateway(self.host_ip_address, session.session)
+                gw = Gateway(self.host_ip_address, connection.session, device_type)
                 if gw.gateway_ip is not None:
                     self.gateway_ip_address = gw.gateway_ip
                     self.host_mac_address = gw.mac_address
@@ -273,21 +281,21 @@ class Discovery:
                     self.gateway_mgmt_ip_address = ip
                     self.subnet_mask = gw.subnet_mask
                     self.network = gw.network
-                session.session.disconnect()
+                connection.session.disconnect()
 
         def intf_vlan_query(device):
             ip = device['ip']
             device_type = device['device_type']
             con_type = device['con_type']
-            session = Connection(ip, username, password, device_type, con_type).connection()
-            if session.session is None:
+            connection = Connection(ip, username, password, device_type, con_type).connection()
+            if connection.session is None:
                 self.failed_devices.append(
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype,
-                        'exception': session.exception
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype,
+                        'exception': connection.exception
                     }
                 )
                 self.successful_devices.remove(device)
@@ -296,31 +304,31 @@ class Discovery:
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype
                     }
                 )
-                intf = Interface(self.host_mac_address, session.session)
+                intf = Interface(self.host_mac_address, connection.session, device_type)
                 if intf.vlan is not None:
                     self.host_vlan = intf.vlan
                     self.connected_device_interface = intf.intf
                     self.connected_device_hostname = device['hostname']
                     self.connected_device_mgmt_ip_address = ip
-                session.session.disconnect()
+                connection.session.disconnect()
 
         def ip_addr_query(device):
             ip = device['ip']
             device_type = device['device_type']
             con_type = device['con_type']
-            session = Connection(ip, username, password, device_type, con_type).connection()
-            if session.session is None:
+            connection = Connection(ip, username, password, device_type, con_type).connection()
+            if connection.session is None:
                 self.failed_devices.append(
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype,
-                        'exception': session.exception
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype,
+                        'exception': connection.exception
                     }
                 )
                 self.successful_devices.remove(device)
@@ -329,14 +337,15 @@ class Discovery:
                     {
                         'ip': ip,
                         'hostname': device['hostname'],
-                        'con_type': session.con_type,
-                        'device_type': session.devicetype
+                        'con_type': connection.con_type,
+                        'device_type': connection.devicetype
                     }
                 )
-                ip_addr = IPAddress(self.host_mac_address, session.session).ip_address
+                ip_addr = IPAddress(self.host_mac_address, connection.session, device_type).ip_address
                 if ip_addr is not None:
-                    self.host_ip_address = ip_addr
-                session.session.disconnect()
+                    if ipv4(ip_addr):
+                        self.host_ip_address = ip_addr
+                connection.session.disconnect()
 
         def mt(function):
             while True:
@@ -349,6 +358,14 @@ class Discovery:
                 ).bug()
                 if not self.bug:
                     break
+                else:
+                    # Used for debugging
+                    bug_devices = []
+                    for device in self.successful_devices:
+                        if device['ip'] != all(device1['ip'] for device1 in self.successful_cycle_devices):
+                            bug_devices.append(bug_devices)
+
+                    time.sleep(7)
 
         con_check = Connectivity(mgmt_ip_list, username, password)
         self.successful_devices = con_check.successful_devices
@@ -357,17 +374,17 @@ class Discovery:
             self.host_ip_address = query_value
             mt(gateway_query)
             if self.host_mac_address is None:
-                self.host_mac_address = 'Not Found. Required for VLAN and upstream info.'
+                self.host_mac_address = 'Not Found. Required for VLAN and switch info.'
             else:
                 time.sleep(7)
                 mt(intf_vlan_query)
         if input_type == 'MAC_Address':
             self.host_mac_address = query_value
-            time.sleep(7)
             mt(ip_addr_query)
             if self.host_ip_address is None:
-                self.host_ip_address = 'Not Found. Required for gateway info.'
+                self.host_ip_address = 'Not Found. Required for gateway and router info.'
             else:
                 time.sleep(7)
                 mt(gateway_query)
+            time.sleep(7)
             mt(intf_vlan_query)

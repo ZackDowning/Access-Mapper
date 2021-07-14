@@ -90,7 +90,12 @@ if __name__ == '__main__':
                     main_file = 'python3 main.py'
                 subprocess_run = subprocess.Popen(f'{main_file} -l {bar_length}', shell=True)
                 current_window.close()
+                start = time.perf_counter()
                 d = Discovery(query_value, input_type, mgmt_file.mgmt_ips, username, password)
+                end = time.perf_counter()
+                # Used for debugging
+                discovery_time = int(round(end - start, 0))
+
                 discovery_init = False
                 discovery_finished = True
                 subprocess_run.terminate()
@@ -110,7 +115,7 @@ if __name__ == '__main__':
         bar_length = int(bar_length) * 4
         current_window = w_progress_bar(bar_length)
         bar_progress = 0
-        for i in range(bar_length):
+        for i in range(bar_length - 1):
             time.sleep(0.25)
             bar_progress += 1
             event, values = current_window.read(timeout=10)
