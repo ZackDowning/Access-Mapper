@@ -100,7 +100,7 @@ if __name__ == '__main__':
                     current_window, d.host_mac_address, d.host_ip_address, d.gateway_ip_address,
                     d.gateway_hostname, d.gateway_mgmt_ip_address, d.host_vlan,
                     d.connected_device_interface, d.connected_device_hostname,
-                    d.connected_device_mgmt_ip_address)
+                    d.connected_device_mgmt_ip_address, d.subnet_mask, d.network)
             if event == Sg.WIN_CLOSED:
                 break
         current_window.close()
