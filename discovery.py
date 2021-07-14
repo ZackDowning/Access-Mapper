@@ -75,6 +75,8 @@ class Gateway:
     def __init__(self, ip_address, session):
         self.gateway_ip = None
         self.mac_address = None
+        self.subnet_mask = None
+        self.network = None
 
         # Checks if any input IP address is within the subnet of any IP interface
         if session.devicetype == 'cisco_nxos':
@@ -95,18 +97,25 @@ class Gateway:
         def gateway(intf):
             if session.devicetype == 'cisco_nxos':
                 # Set of all valid IP addresses within interface network
-                valid_hosts = IPv4Network(intf['network']).hosts()
+                intf_network = intf['network']
+                net = IPv4Network(intf_network)
+                valid_hosts = net.hosts()
                 if any(str(host) == ip_address for host in valid_hosts):
                     self.gateway_ip = intf['ipaddr']
+                    self.subnet_mask = str(net.netmask)
+                    self.network = intf_network
             else:
                 for ip_addr, prefix in zip(intf['ipaddr'], intf['mask']):
                     intf_ip = f'{ip_addr}/{prefix}'
                     # Network ID/Prefix of IP interface
                     intf_network = str(IPv4Interface(intf_ip).network)
+                    net = IPv4Network(intf_network)
                     # Set of all valid IP addresses within above network
-                    valid_hosts = IPv4Network(intf_network).hosts()
+                    valid_hosts = net.hosts()
                     if any(str(host) == ip_address for host in valid_hosts):
                         self.gateway_ip = ip_addr
+                        self.subnet_mask = str(net.netmask)
+                        self.network = intf_network
         # Asyncrononously processes all interfaces from 'show_ip_int' with 'gateway' function
         MultiThread(gateway, show_ip_int).mt()
 
@@ -117,6 +126,7 @@ class Gateway:
             except IndexError:
                 self.mac_address = None
                 self.gateway_ip = None
+                self.subnet_mask = None
 
 
 class IPAddress:
@@ -225,8 +235,9 @@ class Discovery:
         self.connected_device_hostname = None
         self.gateway_mgmt_ip_address = None
         self.gateway_hostname = None
+        self.subnet_mask = None
+        self.network = None
         self.bug = False
-        self.discovery_finished = False
         self.successful_cycle_devices = []
 
         def gateway_query(device):
@@ -254,12 +265,14 @@ class Discovery:
                         'device_type': session.devicetype
                     }
                 )
-                mac_addr = Gateway(self.host_ip_address, session.session)
-                if mac_addr.gateway_ip is not None:
-                    self.gateway_ip_address = mac_addr.gateway_ip
-                    self.host_mac_address = mac_addr.mac_address
+                gw = Gateway(self.host_ip_address, session.session)
+                if gw.gateway_ip is not None:
+                    self.gateway_ip_address = gw.gateway_ip
+                    self.host_mac_address = gw.mac_address
                     self.gateway_hostname = device['hostname']
                     self.gateway_mgmt_ip_address = ip
+                    self.subnet_mask = gw.subnet_mask
+                    self.network = gw.network
                 session.session.disconnect()
 
         def intf_vlan_query(device):
@@ -320,7 +333,7 @@ class Discovery:
                         'device_type': session.devicetype
                     }
                 )
-                ip_addr = IPAddress(query_value, session.session).ip_address
+                ip_addr = IPAddress(self.host_mac_address, session.session).ip_address
                 if ip_addr is not None:
                     self.host_ip_address = ip_addr
                 session.session.disconnect()
@@ -340,34 +353,21 @@ class Discovery:
         con_check = Connectivity(mgmt_ip_list, username, password)
         self.successful_devices = con_check.successful_devices
         self.failed_devices = con_check.failed_devices
-        while not self.discovery_finished:
-            if input_type == 'IP_Address':
-                self.host_ip_address = query_value
-                if self.host_mac_address is None:
-                    time.sleep(5)
-                    mt(gateway_query)
-                    if self.host_mac_address is None:
-                        self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
-                        self.discovery_finished = True
-                else:
-                    time.sleep(5)
-                    mt(intf_vlan_query)
-                    self.discovery_finished = True
-            if input_type == 'MAC_Address':
-                if self.host_ip_address is None:
-                    time.sleep(5)
-                    mt(ip_addr_query)
-                    if self.host_ip_address is None:
-                        self.host_ip_address = 'Not Found. Required for discovery.'
-                        self.discovery_finished = True
-                else:
-                    if self.host_mac_address is None:
-                        time.sleep(5)
-                        mt(gateway_query)
-                        if self.host_mac_address is None:
-                            self.host_mac_address = 'Not Found. Required for VLAN and connected device info.'
-                            self.discovery_finished = True
-                    else:
-                        time.sleep(5)
-                        mt(intf_vlan_query)
-                        self.discovery_finished = True
+        if input_type == 'IP_Address':
+            self.host_ip_address = query_value
+            mt(gateway_query)
+            if self.host_mac_address is None:
+                self.host_mac_address = 'Not Found. Required for VLAN and upstream info.'
+            else:
+                time.sleep(7)
+                mt(intf_vlan_query)
+        if input_type == 'MAC_Address':
+            self.host_mac_address = query_value
+            time.sleep(7)
+            mt(ip_addr_query)
+            if self.host_ip_address is None:
+                self.host_ip_address = 'Not Found. Required for gateway info.'
+            else:
+                time.sleep(7)
+                mt(gateway_query)
+            mt(intf_vlan_query)

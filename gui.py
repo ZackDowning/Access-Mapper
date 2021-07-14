@@ -151,18 +151,24 @@ def w_finished_discovery(
         host_vlan,
         connected_device_interface,
         connected_device_hostname,
-        connected_device_mgmt_ip_address):
+        connected_device_mgmt_ip_address,
+        subnet_mask,
+        network):
     current_window.close()
     layout = [
-        gui_print(f'Host VLAN: {host_vlan}'),
-        gui_print(f'Host MAC Address: {host_mac_address}'),
-        gui_print(f'Host IP Address: {host_ip_address}'),
-        gui_print(f'Host Gateway IP Address: {gateway_ip_address}'),
-        gui_print(f'Upstream Device IP Address: {connected_device_mgmt_ip_address}'),
-        gui_print(f'Upstream Device Hostname: {connected_device_hostname}'),
-        gui_print(f'Upstream Device Interface: {connected_device_interface}'),
-        gui_print(f'Gateway Hostname: {gateway_hostname}'),
-        gui_print(f'Gateway Management IP Address: {gateway_mgmt_ip_address}'),
+        gui_print('Host Information', l_font),
+        gui_print(f'VLAN: {host_vlan}'),
+        gui_print(f'MAC Address: {host_mac_address}'),
+        gui_print(f'IP Address: {host_ip_address}'),
+        gui_print(f'Subnet Mask: {subnet_mask}'),
+        gui_print(f'Gateway IP Address: {gateway_ip_address}'),
+        gui_print(f'Network: {network}'),
+        gui_print(f'Infrastructure Information', l_font),
+        gui_print(f'Switch Management IP Address: {connected_device_mgmt_ip_address}'),
+        gui_print(f'Switch Hostname: {connected_device_hostname}'),
+        gui_print(f'Switch Interface: {connected_device_interface}'),
+        gui_print(f'Router Hostname: {gateway_hostname}'),
+        gui_print(f'Router Management IP Address: {gateway_mgmt_ip_address}'),
         button('Main Page'),
         button('Function Selection')
     ]
