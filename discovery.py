@@ -3,7 +3,6 @@ import re
 from ipaddress import IPv4Network, IPv4Interface
 from general import Connection, MultiThread, interface_formatter
 from address_validator import ipv4
-# from pprint import pp
 
 
 class Interface:
