@@ -1,3 +1,14 @@
-from ipaddress import IPv4Network
+from general import Connection
+from discovery import (
+    IPAddress,
+    # Gateway,
+    # Interface
+)
+from getpass import getpass
 
-print(str(IPv4Network('192.168.0.0/24').prefixlen))
+username = 'zack.downing'
+password = getpass('Password: ')
+
+session = Connection('10.187.30.3', username, password, 'cisco_nxos').connection().session
+intf = IPAddress('40a6.b709.6a7c', session, 'cisco_nxos')
+print(intf.ip_address)
