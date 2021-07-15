@@ -21,7 +21,8 @@ import sys
 # PyInstaller bundle command:
 # pyinstaller -w -F --hidden-import PySimpleGUI --add-data templates;templates main.py
 # TODO: Add comments
-# TODO: Update discovery with MAC address input to not depend on finding MAC address on device router
+# TODO: Find out how to kill threadpool
+# TODO: Show progressbar update by phase
 # TODO: Add menu to just find specific info about device
 # TODO: Add VLAN change based on IP Address or MAC Address - device provisioning
 #   TODO: Allow manual input of switch management IP and interface to change
